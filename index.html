@@ -265,6 +265,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  overflow-y: auto;
 }
 .belly-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
 .belly h2 { margin: 0; font-family: var(--display); font-weight: 400; font-size: 28px; }
@@ -274,9 +275,6 @@ body {
   list-style: none;
   margin: 0;
   padding: 2px 2px 6px;
-  overflow-y: auto;
-  flex: 1;
-  min-height: 0;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
   align-content: start;
@@ -330,6 +328,23 @@ body {
   color: var(--line); font-size: 22px;
 }
 .tip { margin: 0; color: var(--ink-soft); font-size: 13px; }
+
+/* ---------- saved games ---------- */
+.hist { border-top: 2px dashed var(--line); padding-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+.hist h3 { margin: 0; font-family: var(--display); font-weight: 400; font-size: 22px; }
+.hist h3 span { font-family: var(--body); font-size: 13px; color: var(--ink-soft); margin-left: 6px; }
+#historyList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.rec { background: var(--sky); border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.rec-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-family: var(--display); font-size: 17px; }
+.pill { font-size: 13px; padding: 2px 9px; border-radius: 999px; background: var(--paper); color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.pill.open { background: var(--sun); color: var(--ink); }
+.pill.now { background: var(--grape); color: #fff; }
+.rec-chips { display: flex; flex-wrap: wrap; gap: 4px; font-family: var(--display); font-variant-numeric: tabular-nums; }
+.rec-chips span { background: var(--paper); border-radius: 8px; padding: 2px 6px; font-size: 14px; }
+.rec-chips span i { font-style: normal; font-size: 11px; color: var(--ink-soft); margin-right: 3px; }
+.rec-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.rec-actions .btn { font-size: 14px; padding: 6px 12px; border-radius: 12px; box-shadow: 0 3px 0 var(--line); }
+.hist-empty { margin: 0; color: var(--ink-soft); font-size: 14px; }
 
 /* ---------- setup modal ---------- */
 .modal {
@@ -532,6 +547,11 @@ body {
       </div>
       <ol id="orderList"></ol>
       <p class="tip">발표가 끝난 친구는 번호를 눌러 표시하세요.</p>
+      <section class="hist" aria-labelledby="histTitle">
+        <h3 id="histTitle">최근 기록 <span>이 브라우저에 자동 저장돼요. 최근 5판까지 남고, 그보다 오래된 기록은 지워져요.</span></h3>
+        <ol id="historyList"></ol>
+        <textarea id="histFallback" readonly hidden aria-label="발표 순서 텍스트" style="width:100%;min-height:120px;border-radius:12px;border:2px solid var(--line);padding:8px;font-family:var(--body)"></textarea>
+      </section>
     </section>
   </main>
 </div>
@@ -704,13 +724,14 @@ body {
     mon.R = clamp(S * 0.12, r * 1.9, r * 3);
   }
 
-  function newGame() {
+  function newGame(nums) {
     order = []; done.clear(); removed = 0; lastNew = null;
+    skipped = []; currentRec = null;
     parts = []; texts = [];
     auto = false; updateAutoBtn();
     mon.x = W / 2; mon.y = H / 2; mon.vx = mon.vy = 0;
     mon.mouth = 0; mon.bulge = 0; mon.chew = 0; mon.target = null; mon.say = null; mon.group = [];
-    students = participants().map((n) => ({
+    students = (nums || participants()).map((n) => ({
       num: n, color: colorFor(n), dark: shade(colorFor(n), 0.72),
       skin: SKIN[n % 3][0], skinLine: SKIN[n % 3][1], hair: HAIR[(n * 3) % HAIR.length],
       style: (n * 7) % 4, pants: PANTS[n % PANTS.length], big: 1,
@@ -738,7 +759,71 @@ body {
     $('#finale').hidden = true;
     setPhase('idle');
     renderOrder();
+    renderHistory();
   }
+
+  // ---------- saved games (last 5, this browser only) ----------
+  const HIST = 'nyam-monster-history-v1';
+  let skipped = [];
+  let currentRec = null;
+  let history = (() => {
+    try { const v = JSON.parse(localStorage.getItem(HIST)); if (Array.isArray(v)) return v.slice(0, 5); } catch (e) {}
+    return [];
+  })();
+  function saveHistory() { try { localStorage.setItem(HIST, JSON.stringify(history)); } catch (e) {} }
+
+  // called after every catch, skip and "발표 끝" toggle, so a misclick or refresh never loses the order
+  function syncRecord() {
+    if (!currentRec) {
+      if (!order.length) return;
+      currentRec = { id: Date.now(), nums: students.map((s) => s.num) };
+      history.unshift(currentRec);
+      history = history.slice(0, 5);
+    }
+    Object.assign(currentRec, {
+      updated: Date.now(), order: order.slice(), done: [...done], skipped: skipped.slice(),
+      total: students.length - removed, finished: alive().length === 0,
+    });
+    saveHistory();
+    renderHistory();
+  }
+
+  function resumeRecord(id) {
+    const rec = history.find((r) => r.id === id);
+    if (!rec) return;
+    newGame(rec.nums.filter((n) => !rec.skipped.includes(n)));
+    for (const n of rec.order) {
+      const s = students.find((x) => x.num === n);
+      if (s) { s.alive = false; s.eaten = true; s.scale = 0; }
+    }
+    order = rec.order.slice();
+    rec.done.forEach((n) => done.add(n));
+    skipped = rec.skipped.slice();
+    currentRec = rec;
+    renderOrder(); updateStatus(); renderHistory();
+    showTab('hunt');
+    toast(`이어서 해요. ${order.length}명까지 정해져 있어요`);
+  }
+
+  const fmtTime = (t) => new Date(t).toLocaleString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short', hour: 'numeric', minute: '2-digit' });
+  function renderHistory() {
+    const box = $('#historyList');
+    if (!history.length) { box.innerHTML = '<li class="hist-empty">아직 저장된 기록이 없어요. 한 명이 잡히면 바로 저장돼요.</li>'; return; }
+    box.innerHTML = history.map((r) => {
+      const now = r === currentRec;
+      const state = r.finished ? `<span class="pill">완료 ${r.order.length}/${r.total}</span>` : `<span class="pill open">진행 중 ${r.order.length}/${r.total}</span>`;
+      const chips = r.order.map((n, i) => `<span><i>${i + 1}</i>${n}번</span>`).join('');
+      const resume = !r.finished && !now ? `<button class="btn" type="button" data-resume="${r.id}">이어서 하기</button>` : '';
+      return `<li class="rec"><div class="rec-head">${fmtTime(r.updated || r.id)} ${state}${now ? '<span class="pill now">지금 게임</span>' : ''}</div>
+        <div class="rec-chips">${chips}</div>
+        <div class="rec-actions"><button class="btn" type="button" data-copy="${r.id}">순서 복사</button>${resume}</div></li>`;
+    }).join('');
+  }
+  $('#historyList').addEventListener('click', (e) => {
+    const c = e.target.closest('[data-copy]'), r = e.target.closest('[data-resume]');
+    if (c) { const rec = history.find((x) => x.id === +c.dataset.copy); if (rec) copyText(orderText(rec.order)); }
+    if (r) resumeRecord(+r.dataset.resume);
+  });
 
   function setPhase(p) {
     phase = p; phaseT = 0;
@@ -821,7 +906,7 @@ body {
         color: [tg.color, '#ffd447', '#ffffff', '#ff8fab'][i % 4], star: i % 2 === 0, size: S * (0.012 + Math.random() * 0.012) });
     }
     texts.push({ text: `${tg.num}번 냠!`, x: mon.x, y: mon.y - mon.R * 1.15, life: 1, max: 1.3, size: mon.R * 0.6 });
-    renderOrder(); updateStatus();
+    renderOrder(); updateStatus(); syncRecord();
   }
 
   function showReveal(tg) {
@@ -855,7 +940,8 @@ body {
     if (phase !== 'reveal' || !order.length) return;
     const n = order.pop();
     removed++; lastNew = null;
-    renderOrder(); updateStatus();
+    skipped.push(n);
+    renderOrder(); updateStatus(); syncRecord();
     toast(`${n}번은 결석이라 순서에서 뺐어요`);
     nextRound();
   }
@@ -891,7 +977,7 @@ body {
     if (!b) return;
     const n = +b.dataset.num;
     done.has(n) ? done.delete(n) : done.add(n);
-    renderOrder();
+    renderOrder(); syncRecord();
   });
 
   // ---------- simulation ----------
@@ -1751,22 +1837,25 @@ body {
   }));
   document.addEventListener('fullscreenchange', () => { fsBtn.textContent = document.fullscreenElement ? '전체화면 끄기' : '전체화면'; });
 
-  function orderText() {
-    return '발표 순서\n' + order.map((n, i) => `${i + 1}. ${n}번`).join('\n');
+  function orderText(list = order) {
+    return '발표 순서\n' + list.map((n, i) => `${i + 1}. ${n}번`).join('\n');
   }
-  async function copyOrder() {
-    if (!order.length) { toast('아직 정해진 순서가 없어요'); return; }
-    const txt = orderText();
+  async function copyText(txt) {
     try {
       await navigator.clipboard.writeText(txt);
       toast('발표 순서를 복사했어요');
     } catch (e) {
-      const ta = $('#copyFallback');
+      let ta;
+      if (!$('#orderView').hidden) ta = $('#histFallback');
+      else { ta = $('#copyFallback'); if ($('#finale').hidden) finaleView(); }
       ta.value = txt;
-      if ($('#finale').hidden) { order.length && $('#finalList') && finaleView(); }
       ta.hidden = false; ta.focus(); ta.select();
       toast('자동 복사가 안 돼요. 선택된 글자를 Ctrl+C로 복사하세요');
     }
+  }
+  function copyOrder() {
+    if (!order.length) { toast('아직 정해진 순서가 없어요'); return; }
+    copyText(orderText());
   }
   function finaleView() {
     $('#finalList').innerHTML = order.map((n, i) => `<li><span>${i + 1}</span><b>${n}번</b></li>`).join('');
@@ -1802,6 +1891,9 @@ body {
   resize();
   newGame();
   if (!saved) openSetup();
+  else if (history[0] && !history[0].finished) {
+    setTimeout(() => toast('끝나지 않은 게임이 있어요. 발표 순서 탭에서 "이어서 하기"를 누르세요'), 600);
+  }
   if (document.fonts && document.fonts.load) document.fonts.load('20px Jua').catch(() => {});
   requestAnimationFrame(frame);
 })();
