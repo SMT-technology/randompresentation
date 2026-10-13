@@ -333,7 +333,26 @@ body {
 .hist { border-top: 2px dashed var(--line); padding-top: 14px; display: flex; flex-direction: column; gap: 10px; }
 .hist h3 { margin: 0; font-family: var(--display); font-weight: 400; font-size: 22px; }
 .hist h3 span { font-family: var(--body); font-size: 13px; color: var(--ink-soft); margin-left: 6px; }
-#historyList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.rec-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.rec-name { font-size: 19px; }
+.rec-time { font-family: var(--body); font-size: 13px; color: var(--ink-soft); }
+.rec-actions .btn.danger { color: var(--berry-deep); }
+.rec-actions .btn.danger[data-armed] { background: var(--berry); color: #fff; box-shadow: 0 3px 0 var(--berry-deep); }
+#histFallback { width: 100%; min-height: 120px; border-radius: 12px; border: 2px solid var(--line); padding: 8px; font-family: var(--body); flex: none; }
+.btn.flash { background: #ffe9a8; box-shadow: 0 4px 0 var(--sun-deep); }
+.sheet.small { width: min(440px, 100%); gap: 14px; }
+.save-info { margin: 0; color: var(--ink-soft); }
+#saveName {
+  width: 100%;
+  font-family: var(--display);
+  font-size: 20px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 3px solid var(--line);
+  color: var(--ink);
+  background: var(--paper);
+}
+#saveName:focus-visible { outline: none; border-color: var(--grape); }
 .rec { background: var(--sky); border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
 .rec-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-family: var(--display); font-size: 17px; }
 .pill { font-size: 13px; padding: 2px 9px; border-radius: 999px; background: var(--paper); color: var(--ink-soft); font-variant-numeric: tabular-nums; }
@@ -488,11 +507,14 @@ body {
     <div class="tabs" role="tablist" aria-label="화면 고르기">
       <button class="tab" role="tab" id="tabHunt" type="button" aria-selected="true" aria-controls="fieldWrap">몬스터 사냥</button>
       <button class="tab" role="tab" id="tabOrder" type="button" aria-selected="false" aria-controls="orderView">발표 순서 <small id="tabCount">0/30</small></button>
+      <button class="tab" role="tab" id="tabSave" type="button" aria-selected="false" aria-controls="saveView">저장함</button>
     </div>
     <div class="status" id="status" aria-live="polite">남은 친구 <b>30</b>명</div>
     <div class="controls">
       <button class="btn primary" id="huntBtn" type="button">몬스터 출동!</button>
       <button class="btn" id="autoBtn" type="button" aria-pressed="false">자동 사냥</button>
+      <button class="btn flash" id="flashBtn" type="button" title="남은 친구들 순서를 1초 만에 정해요">번개 뽑기</button>
+      <button class="btn" id="saveBtn" type="button">저장</button>
       <button class="btn" id="soundBtn" type="button" aria-pressed="true">소리 켜짐</button>
       <button class="btn" id="fsBtn" type="button">전체화면</button>
       <button class="btn" id="setBtn" type="button">설정</button>
@@ -546,14 +568,45 @@ body {
         </div>
       </div>
       <ol id="orderList"></ol>
-      <p class="tip">발표가 끝난 친구는 번호를 눌러 표시하세요.</p>
-      <section class="hist" aria-labelledby="histTitle">
-        <h3 id="histTitle">최근 기록 <span>이 브라우저에 자동 저장돼요. 최근 5판까지 남고, 그보다 오래된 기록은 지워져요.</span></h3>
-        <ol id="historyList"></ol>
-        <textarea id="histFallback" readonly hidden aria-label="발표 순서 텍스트" style="width:100%;min-height:120px;border-radius:12px;border:2px solid var(--line);padding:8px;font-family:var(--body)"></textarea>
+      <p class="tip">발표가 끝난 친구는 번호를 눌러 표시하세요. 위쪽 <b>저장</b> 버튼을 누르면 이름을 붙여 저장함에 남길 수 있어요.</p>
+    </section>
+
+    <section class="belly" id="saveView" role="tabpanel" aria-labelledby="tabSave" hidden>
+      <div class="belly-head">
+        <div>
+          <h2>저장함</h2>
+          <p class="belly-sub">이 컴퓨터의 브라우저에만 저장돼요</p>
+        </div>
+        <div class="actions">
+          <button class="btn" id="backBtn2" type="button">사냥 화면으로</button>
+        </div>
+      </div>
+      <section class="hist" aria-labelledby="savedTitle">
+        <h3 id="savedTitle">저장한 기록 <span>저장 버튼으로 남긴 기록이에요. 직접 지우기 전까지 남아요(최대 30개).</span></h3>
+        <ol id="savedList" class="rec-list"></ol>
       </section>
+      <section class="hist" aria-labelledby="histTitle">
+        <h3 id="histTitle">자동 저장 <span>한 명 잡힐 때마다 저장돼요. 최근 5판까지 남고 오래된 기록은 지워져요.</span></h3>
+        <ol id="historyList" class="rec-list"></ol>
+      </section>
+      <textarea id="histFallback" readonly hidden aria-label="발표 순서 텍스트"></textarea>
     </section>
   </main>
+</div>
+
+<div class="modal" id="saveModal" hidden>
+  <div class="sheet small" role="dialog" aria-modal="true" aria-labelledby="saveTitle">
+    <h2 id="saveTitle">발표 순서 저장</h2>
+    <p class="save-info" id="saveInfo">지금까지 정한 순서를 저장해요.</p>
+    <div>
+      <label class="field-label" for="saveName">이름 <span>반이나 과목을 적어두면 찾기 쉬워요</span></label>
+      <input id="saveName" type="text" maxlength="30" placeholder="예: 3학년 2반 국어" autocomplete="off">
+    </div>
+    <div class="sheet-foot">
+      <button class="btn" id="saveCancel" type="button">취소</button>
+      <button class="btn primary" id="saveOk" type="button">저장하기</button>
+    </div>
+  </div>
 </div>
 
 <div class="modal" id="setup" hidden>
@@ -788,9 +841,21 @@ body {
     renderHistory();
   }
 
+  // manual saves: kept until deleted (max 30)
+  const SAVED = 'nyam-monster-saved-v1';
+  let saved30 = (() => {
+    try { const v = JSON.parse(localStorage.getItem(SAVED)); if (Array.isArray(v)) return v.slice(0, 30); } catch (e) {}
+    return [];
+  })();
+  function saveSaved() {
+    try { localStorage.setItem(SAVED, JSON.stringify(saved30)); return true; } catch (e) { return false; }
+  }
+  const findRec = (id) => history.find((r) => r.id === id) || saved30.find((r) => r.id === id);
+
   function resumeRecord(id) {
-    const rec = history.find((r) => r.id === id);
+    const rec = findRec(id);
     if (!rec) return;
+    const isAuto = history.includes(rec);
     newGame(rec.nums.filter((n) => !rec.skipped.includes(n)));
     for (const n of rec.order) {
       const s = students.find((x) => x.num === n);
@@ -799,36 +864,120 @@ body {
     order = rec.order.slice();
     rec.done.forEach((n) => done.add(n));
     skipped = rec.skipped.slice();
-    currentRec = rec;
+    currentRec = isAuto ? rec : null;   // a manual save stays as it was; auto-save starts a new entry
     renderOrder(); updateStatus(); renderHistory();
     showTab('hunt');
     toast(`이어서 해요. ${order.length}명까지 정해져 있어요`);
   }
 
-  const fmtTime = (t) => new Date(t).toLocaleString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short', hour: 'numeric', minute: '2-digit' });
-  function renderHistory() {
-    const box = $('#historyList');
-    if (!history.length) { box.innerHTML = '<li class="hist-empty">아직 저장된 기록이 없어요. 한 명이 잡히면 바로 저장돼요.</li>'; return; }
-    box.innerHTML = history.map((r) => {
-      const now = r === currentRec;
-      const state = r.finished ? `<span class="pill">완료 ${r.order.length}/${r.total}</span>` : `<span class="pill open">진행 중 ${r.order.length}/${r.total}</span>`;
-      const chips = r.order.map((n, i) => `<span><i>${i + 1}</i>${n}번</span>`).join('');
-      const resume = !r.finished && !now ? `<button class="btn" type="button" data-resume="${r.id}">이어서 하기</button>` : '';
-      return `<li class="rec"><div class="rec-head">${fmtTime(r.updated || r.id)} ${state}${now ? '<span class="pill now">지금 게임</span>' : ''}</div>
-        <div class="rec-chips">${chips}</div>
-        <div class="rec-actions"><button class="btn" type="button" data-copy="${r.id}">순서 복사</button>${resume}</div></li>`;
-    }).join('');
+  function snapshot() {
+    return {
+      nums: students.map((s) => s.num), order: order.slice(), done: [...done], skipped: skipped.slice(),
+      total: students.length - removed, finished: alive().length === 0,
+    };
   }
-  $('#historyList').addEventListener('click', (e) => {
-    const c = e.target.closest('[data-copy]'), r = e.target.closest('[data-resume]');
-    if (c) { const rec = history.find((x) => x.id === +c.dataset.copy); if (rec) copyText(orderText(rec.order)); }
+
+  const fmtTime = (t) => new Date(t).toLocaleString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short', hour: 'numeric', minute: '2-digit' });
+  const esc = (t) => String(t).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+  function recCard(r, manual) {
+    const now = !manual && r === currentRec;
+    const state = r.finished ? `<span class="pill">완료 ${r.order.length}/${r.total}</span>` : `<span class="pill open">진행 중 ${r.order.length}/${r.total}</span>`;
+    const chips = r.order.map((n, i) => `<span><i>${i + 1}</i>${n}번</span>`).join('');
+    const resume = !r.finished && !now ? `<button class="btn" type="button" data-resume="${r.id}">이어서 하기</button>` : '';
+    const del = manual ? `<button class="btn danger" type="button" data-del="${r.id}">지우기</button>` : '';
+    const title = manual
+      ? `<span class="rec-name">${esc(r.name)}</span><span class="rec-time">${fmtTime(r.id)}</span>`
+      : `<span>${fmtTime(r.updated || r.id)}</span>`;
+    return `<li class="rec"><div class="rec-head">${title} ${state}${now ? '<span class="pill now">지금 게임</span>' : ''}</div>
+      <div class="rec-chips">${chips}</div>
+      <div class="rec-actions"><button class="btn" type="button" data-copy="${r.id}">순서 복사</button>${resume}${del}</div></li>`;
+  }
+  function renderHistory() {
+    $('#historyList').innerHTML = history.length ? history.map((r) => recCard(r, false)).join('')
+      : '<li class="hist-empty">아직 기록이 없어요. 한 명이 잡히면 바로 저장돼요.</li>';
+    $('#savedList').innerHTML = saved30.length ? saved30.map((r) => recCard(r, true)).join('')
+      : '<li class="hist-empty">저장한 기록이 없어요. 사냥 화면 위쪽 <b>저장</b> 버튼을 눌러 보세요.</li>';
+  }
+  $('#saveView').addEventListener('click', (e) => {
+    const c = e.target.closest('[data-copy]'), r = e.target.closest('[data-resume]'), d = e.target.closest('[data-del]');
+    if (c) { const rec = findRec(+c.dataset.copy); if (rec) copyText(orderText(rec.order)); }
     if (r) resumeRecord(+r.dataset.resume);
+    if (d) {
+      // two-step delete: first click arms, second click deletes
+      if (!d.hasAttribute('data-armed')) { d.setAttribute('data-armed', ''); d.textContent = '정말 지울까요?'; return; }
+      saved30 = saved30.filter((x) => x.id !== +d.dataset.del);
+      saveSaved(); renderHistory(); toast('지웠어요');
+    }
   });
+
+  // ---------- save dialog ----------
+  function openSave() {
+    if (!order.length) { toast('아직 정해진 순서가 없어요. 한 명 이상 잡은 뒤에 저장하세요'); return; }
+    const total = students.length - removed;
+    $('#saveInfo').textContent = `지금까지 정한 ${order.length}명(전체 ${total}명)의 순서를 저장해요.`;
+    $('#saveName').value = '';
+    $('#saveModal').hidden = false;
+    $('#saveName').focus();
+  }
+  function closeSave() { $('#saveModal').hidden = true; }
+  function doSave() {
+    const name = $('#saveName').value.trim() || `${fmtTime(Date.now())} 발표 순서`;
+    saved30.unshift({ id: Date.now(), name, ...snapshot() });
+    saved30 = saved30.slice(0, 30);
+    closeSave();
+    renderHistory();
+    toast(saveSaved() ? `"${name}" 저장했어요. 저장함 탭에서 볼 수 있어요` : '이 브라우저에서는 저장할 수 없어요');
+  }
+  $('#saveBtn').addEventListener('click', (e) => { openSave(); e.currentTarget.blur(); });
+  $('#saveCancel').addEventListener('click', closeSave);
+  $('#saveOk').addEventListener('click', doSave);
+  $('#saveName').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); doSave(); } });
+
+  // ---------- lightning draw: everyone left, in random order, in about one second ----------
+  let flashQueue = [], flashGap = 0, flashT = 0;
+  function flashDraw() {
+    if (phase !== 'idle' && phase !== 'reveal') return;
+    const left = alive();
+    if (!left.length) return;
+    $('#reveal').hidden = true;
+    auto = false; updateAutoBtn();
+    showTab('hunt');
+    for (let i = left.length - 1; i > 0; i--) { const j = randInt(i + 1); [left[i], left[j]] = [left[j], left[i]]; }
+    flashQueue = left;
+    flashGap = 1 / left.length;
+    flashT = 0.05;
+    mon.target = null; mon.group = [];
+    mon.say = { text: '번개 냠냠냠!', t: 1.6 };
+    setPhase('flash');
+    SFX.lock();
+  }
+  function flashStep(dt) {
+    flashT -= dt;
+    let n = 0;
+    while (flashT <= 0 && flashQueue.length) {
+      const s = flashQueue.shift();
+      s.alive = false; s.eaten = true; s.scale = 0;
+      order.push(s.num);
+      for (let i = 0; i < 5; i++) {
+        const a = Math.random() * TAU, sp = S * (0.15 + Math.random() * 0.25);
+        parts.push({ x: s.x, y: s.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - S * 0.2, life: 1, max: 0.6,
+          color: [s.color, '#ffd447', '#ffffff'][i % 3], star: i % 2 === 0, size: S * 0.01 });
+      }
+      texts.push({ text: `${s.num}`, x: s.x, y: s.y - s.r, life: 1, max: 0.8, size: s.r * 1.1 });
+      tone(500 + order.length * 25, 0.05, { type: 'triangle', vol: 0.06 });
+      mon.chew = 0.25; mon.bulge = Math.min(1, mon.bulge + 0.15);
+      flashT += flashGap;
+      n++;
+    }
+    if (n) { renderOrder(); updateStatus(); }
+    if (!flashQueue.length && phaseT > 1.4) { syncRecord(); finale(); }
+  }
 
   function setPhase(p) {
     phase = p; phaseT = 0;
     const hb = $('#huntBtn');
-    hb.disabled = ['sniff', 'chase', 'tease', 'lunge', 'eat'].includes(p);
+    hb.disabled = ['sniff', 'chase', 'tease', 'lunge', 'eat', 'flash'].includes(p);
+    $('#flashBtn').disabled = !(p === 'idle' || p === 'reveal');
     hb.textContent = p === 'idle' ? '몬스터 출동!'
       : p === 'reveal' ? (alive().length ? '다음 사냥' : '결과 보기')
       : p === 'done' ? '한 번 더 하기' : '사냥 중…';
@@ -1107,6 +1256,7 @@ body {
         else { setPhase('idle'); hunt(); }
       } else if (tg.eaten && phaseT > eatDur + 0.85) showReveal(tg);
     } else {
+      if (phase === 'flash') flashStep(rdt);
       mon.vx *= Math.max(0, 1 - dt * 6);
       mon.vy *= Math.max(0, 1 - dt * 6);
       mon.x += mon.vx * dt; mon.y += mon.vy * dt;
@@ -1790,15 +1940,20 @@ body {
 
   // ---------- controls ----------
   function showTab(name) {
-    const hunt = name === 'hunt';
-    $('#fieldWrap').hidden = !hunt;
-    $('#orderView').hidden = hunt;
-    $('#tabHunt').setAttribute('aria-selected', String(hunt));
-    $('#tabOrder').setAttribute('aria-selected', String(!hunt));
+    const panes = { hunt: ['#fieldWrap', '#tabHunt'], order: ['#orderView', '#tabOrder'], save: ['#saveView', '#tabSave'] };
+    for (const [key, [pane, tab]] of Object.entries(panes)) {
+      $(pane).hidden = key !== name;
+      $(tab).setAttribute('aria-selected', String(key === name));
+    }
+    $('#histFallback').hidden = true;
   }
   $('#tabHunt').addEventListener('click', () => showTab('hunt'));
   $('#tabOrder').addEventListener('click', () => showTab('order'));
+  $('#tabSave').addEventListener('click', () => showTab('save'));
   $('#backBtn').addEventListener('click', () => showTab('hunt'));
+  $('#backBtn2').addEventListener('click', () => showTab('hunt'));
+  $('#flashBtn').addEventListener('click', blurAfterFlash);
+  function blurAfterFlash(e) { flashDraw(); e.currentTarget.blur(); }
   $('#toOrderBtn').addEventListener('click', () => { $('#finale').hidden = true; showTab('order'); });
 
   function primary() {
@@ -1826,7 +1981,7 @@ body {
   $('#setBtn').addEventListener('click', blurAfter(openSetup));
   $('#nextBtn').addEventListener('click', nextRound);
   $('#skipBtn').addEventListener('click', skipLast);
-  $('#againBtn').addEventListener('click', newGame);
+  $('#againBtn').addEventListener('click', () => newGame());
   $('#closeFinale').addEventListener('click', () => { $('#finale').hidden = true; });
 
   const fsBtn = $('#fsBtn');
@@ -1846,7 +2001,7 @@ body {
       toast('발표 순서를 복사했어요');
     } catch (e) {
       let ta;
-      if (!$('#orderView').hidden) ta = $('#histFallback');
+      if ($('#fieldWrap').hidden) { showTab('save'); ta = $('#histFallback'); }
       else { ta = $('#copyFallback'); if ($('#finale').hidden) finaleView(); }
       ta.value = txt;
       ta.hidden = false; ta.focus(); ta.select();
@@ -1874,11 +2029,12 @@ body {
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      if (!$('#setup').hidden && students.length) closeSetup();
+      if (!$('#saveModal').hidden) closeSave();
+      else if (!$('#setup').hidden && students.length) closeSetup();
       return;
     }
     if (e.key !== ' ' && e.key !== 'Enter') return;
-    if (!$('#setup').hidden) return;
+    if (!$('#setup').hidden || !$('#saveModal').hidden) return;
     if (e.target.closest && e.target.closest('textarea, input')) return;
     if (e.target.closest && e.target.closest('button') && e.key === 'Enter') return;
     e.preventDefault();
