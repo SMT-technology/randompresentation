@@ -1,0 +1,1811 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="몬스터에게 잡힌 순서대로 발표 순서를 정하는 교실용 게임">
+<style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+<title>냠냠 몬스터 발표 순서</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap">
+<style>
+/* Layout: chunky toy-box header with two tabs; the grass playground fills the rest of the screen, the order list is its own tab. One bright look, chosen for classroom projectors. */
+:root {
+  --sky: #e4f3fb;
+  --sky-deep: #cbe6f5;
+  --ink: #2d3550;
+  --ink-soft: #66708f;
+  --paper: #ffffff;
+  --line: #d3e2ee;
+  --berry: #ff5d8f;
+  --berry-deep: #d93c6e;
+  --grape: #7c62e6;
+  --sun: #ffd447;
+  --sun-deep: #e2b21f;
+  --grass: #b8e39c;
+  --display: "Jua", "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+  --body: "Gowun Dodum", "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+  color-scheme: light;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  background:
+    radial-gradient(60px 26px at 12% 9%, #fff 98%, transparent) ,
+    radial-gradient(90px 34px at 16% 11%, #fff 98%, transparent),
+    radial-gradient(70px 28px at 88% 6%, #fff 98%, transparent),
+    linear-gradient(var(--sky), var(--sky-deep));
+  background-attachment: fixed;
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 15px;
+}
+.app {
+  max-width: 1440px;
+  margin: 0 auto;
+  height: 100%;
+  padding-inline: 16px;
+  padding-block: 8px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+/* ---------- header ---------- */
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 18px;
+}
+.brand { display: flex; align-items: baseline; gap: 4px 12px; flex-wrap: wrap; margin-right: auto; }
+.brand h1 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(28px, 3.4vw, 40px);
+  letter-spacing: -0.5px;
+  color: var(--ink);
+  text-shadow: 3px 3px 0 var(--sun);
+}
+.brand p { margin: 0; color: var(--ink-soft); font-size: 15px; }
+.status {
+  font-family: var(--display);
+  font-size: 18px;
+  background: var(--paper);
+  border-radius: 999px;
+  padding: 7px 16px;
+  box-shadow: 0 3px 0 var(--line);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.status b { color: var(--berry-deep); font-weight: 400; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn {
+  font-family: var(--display);
+  font-size: 17px;
+  line-height: 1.1;
+  border: 0;
+  border-radius: 16px;
+  padding: 10px 15px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 4px 0 var(--line);
+  cursor: pointer;
+  transition: transform .08s, box-shadow .08s, background .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn:hover { transform: translateY(-1px); }
+.btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--line); }
+.btn:focus-visible { outline: 3px solid var(--grape); outline-offset: 2px; }
+.btn[disabled] { opacity: .55; cursor: default; transform: none; }
+.btn.primary {
+  background: var(--berry);
+  color: #fff;
+  font-size: 21px;
+  padding: 12px 22px;
+  box-shadow: 0 5px 0 var(--berry-deep);
+}
+.btn.primary:active { box-shadow: 0 1px 0 var(--berry-deep); }
+.btn[aria-pressed="true"] { background: var(--sun); box-shadow: 0 4px 0 var(--sun-deep); }
+.btn.ghost { background: transparent; box-shadow: none; color: var(--ink-soft); font-size: 15px; text-decoration: underline; text-underline-offset: 3px; padding: 8px 10px; }
+
+/* ---------- stage ---------- */
+.stage {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+.tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--paper);
+  border-radius: 18px;
+  box-shadow: 0 3px 0 var(--line);
+}
+.tab {
+  font-family: var(--display);
+  font-size: 17px;
+  border: 0;
+  border-radius: 14px;
+  padding: 8px 14px;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+.tab[aria-selected="true"] { background: var(--grape); color: #fff; }
+.tab:focus-visible { outline: 3px solid var(--grape); outline-offset: 2px; }
+.tab small { font-size: 13px; opacity: .85; margin-left: 2px; }
+.field-wrap {
+  position: absolute;
+  inset: 0;
+  border-radius: 28px;
+  overflow: hidden;
+  background: var(--grass);
+  box-shadow: 0 0 0 6px var(--paper), 0 10px 0 6px var(--line);
+}
+#field { display: block; width: 100%; height: 100%; touch-action: manipulation; }
+.hint {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  max-width: calc(100% - 28px);
+  background: rgba(255,255,255,.92);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-family: var(--display);
+  font-size: 16px;
+  text-align: center;
+  pointer-events: none;
+}
+.hint kbd {
+  font-family: var(--display);
+  background: var(--sky);
+  border-radius: 6px;
+  padding: 1px 6px;
+  box-shadow: 0 2px 0 var(--line);
+}
+
+/* reveal card */
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(45, 53, 80, .28);
+  animation: fade .2s ease-out;
+}
+.card {
+  background: var(--paper);
+  border-radius: 28px;
+  padding: 22px 26px 18px;
+  width: min(420px, 100%);
+  max-height: 100%;
+  overflow: auto;
+  text-align: center;
+  box-shadow: 0 8px 0 var(--line), 0 18px 40px rgba(45,53,80,.25);
+  animation: pop .38s cubic-bezier(.3,1.6,.5,1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.rank {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 20px;
+  color: var(--ink-soft);
+}
+.rank b { color: var(--berry-deep); font-weight: 400; font-size: 26px; }
+.portrait {
+  width: 150px;
+  height: 150px;
+  max-width: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--c, var(--sun));
+  box-shadow: 0 0 0 6px #fff, 0 0 0 9px var(--c, var(--sun));
+  margin: 8px 0 2px;
+}
+.portrait canvas { display: block; width: 100%; height: 100%; }
+.bignum {
+  font-family: var(--display);
+  font-size: 68px;
+  line-height: 1;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 3px 3px 0 var(--c, var(--sun));
+}
+.bignum small { font-size: 30px; margin-left: 2px; }
+.quip { margin: 0; font-size: 17px; color: var(--ink); }
+.card .actions { display: flex; flex-wrap: wrap; gap: 6px 10px; justify-content: center; align-items: center; margin-top: 6px; }
+.autobar { width: 100%; height: 6px; border-radius: 6px; background: var(--sky); overflow: hidden; }
+.autobar i { display: block; height: 100%; width: 0; background: var(--sun); }
+
+/* finale */
+.finale-card { width: min(640px, 100%); }
+.finale-card h2 { margin: 0; font-family: var(--display); font-weight: 400; font-size: 30px; text-wrap: balance; }
+.finale-card p { margin: 0; color: var(--ink-soft); }
+.final-list {
+  list-style: none;
+  margin: 6px 0;
+  padding: 0;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+  gap: 8px;
+}
+.final-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--sky);
+  border-radius: 14px;
+  padding: 6px 8px;
+  font-family: var(--display);
+  font-variant-numeric: tabular-nums;
+}
+.final-list li span { font-size: 13px; color: var(--ink-soft); min-width: 18px; }
+.final-list li b { font-weight: 400; font-size: 19px; }
+#copyFallback { width: 100%; min-height: 120px; font-family: var(--body); font-size: 14px; border-radius: 12px; border: 2px solid var(--line); padding: 8px; }
+
+/* ---------- belly / order rail ---------- */
+.belly {
+  position: absolute;
+  inset: 0;
+  background: var(--paper);
+  border-radius: 28px;
+  box-shadow: 0 8px 0 var(--line);
+  padding: 18px 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.belly-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.belly h2 { margin: 0; font-family: var(--display); font-weight: 400; font-size: 28px; }
+.belly-sub { margin: 0; color: var(--ink-soft); font-size: 14px; }
+.belly-head .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+#orderList {
+  list-style: none;
+  margin: 0;
+  padding: 2px 2px 6px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  align-content: start;
+  gap: 10px;
+}
+.slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px 10px;
+  border-radius: 18px;
+  background: var(--sky);
+  font-family: var(--display);
+  font-variant-numeric: tabular-nums;
+  position: relative;
+}
+.slot .r { font-size: 14px; color: var(--ink-soft); }
+.slot button {
+  width: 60px; height: 60px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  background: var(--c);
+  font-family: var(--display);
+  font-size: 28px;
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: 0 3px 0 rgba(45,53,80,.15);
+}
+.slot button:focus-visible { outline: 3px solid var(--grape); outline-offset: 2px; }
+.slot.new { animation: pop .45s cubic-bezier(.3,1.6,.5,1); }
+.slot.done { background: #eef0f4; }
+.slot.done button { filter: grayscale(.85); opacity: .6; }
+.slot.done::after {
+  content: "발표 끝";
+  position: absolute;
+  top: 26px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-12deg);
+  font-size: 13px;
+  color: #fff;
+  background: var(--grape);
+  padding: 1px 6px;
+  border-radius: 6px;
+  pointer-events: none;
+}
+.slot.empty { background: transparent; border: 2px dashed var(--line); }
+.slot.empty .q {
+  width: 46px; height: 46px; border-radius: 50%;
+  display: grid; place-items: center;
+  color: var(--line); font-size: 22px;
+}
+.tip { margin: 0; color: var(--ink-soft); font-size: 13px; }
+
+/* ---------- setup modal ---------- */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(45, 53, 80, .5);
+  animation: fade .2s ease-out;
+}
+.sheet {
+  width: min(680px, 100%);
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  background: var(--paper);
+  border-radius: 28px;
+  padding: 22px 22px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  box-shadow: 0 10px 0 var(--line);
+}
+.sheet-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.sheet h2 { margin: 0; font-family: var(--display); font-weight: 400; font-size: 30px; }
+.field-label { font-family: var(--display); font-size: 19px; margin: 0 0 8px; display: block; }
+.field-label span { font-family: var(--body); font-size: 13px; color: var(--ink-soft); margin-left: 4px; }
+.count-row { display: flex; align-items: center; gap: 10px; }
+.count-row input[type=range] { flex: 1; min-width: 0; accent-color: var(--berry); height: 28px; }
+.count-row .btn { width: 44px; padding: 8px 0; font-size: 22px; }
+.count-out {
+  font-family: var(--display);
+  font-size: 22px;
+  min-width: 96px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(46px, 1fr)); gap: 6px; }
+.chip {
+  font-family: var(--display);
+  font-size: 18px;
+  height: 42px;
+  border-radius: 12px;
+  border: 0;
+  background: var(--c);
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: 0 3px 0 rgba(45,53,80,.14);
+  font-variant-numeric: tabular-nums;
+}
+.chip[aria-pressed="true"] {
+  background: #eef0f4;
+  color: #a5acc0;
+  text-decoration: line-through;
+  box-shadow: none;
+}
+.chip:focus-visible { outline: 3px solid var(--grape); outline-offset: 2px; }
+.mons { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.mon {
+  border: 3px solid var(--line);
+  background: var(--paper);
+  border-radius: 20px;
+  padding: 6px 6px 10px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-family: var(--body);
+  color: var(--ink);
+}
+.mon canvas { width: 100%; max-width: 140px; aspect-ratio: 140 / 110; height: auto; }
+.mon b { font-family: var(--display); font-weight: 400; font-size: 19px; }
+.mon small { font-size: 12px; color: var(--ink-soft); text-align: center; }
+.mon[aria-pressed="true"] { border-color: var(--berry); background: #fff2f6; }
+.mon:focus-visible { outline: 3px solid var(--grape); outline-offset: 2px; }
+.seg { display: inline-flex; gap: 8px; flex-wrap: wrap; }
+.sheet-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 2px dashed var(--line);
+  padding-top: 14px;
+}
+.join { font-family: var(--display); font-size: 20px; }
+.join b { color: var(--berry-deep); font-weight: 400; }
+.warn { margin: 4px 0 0; font-size: 13px; color: var(--berry-deep); }
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 30;
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--display);
+  font-size: 16px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  max-width: calc(100% - 32px);
+  text-align: center;
+}
+
+@keyframes pop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .card, .slot.new, .overlay, .modal { animation: none; }
+}
+@media (max-height: 640px) {
+  .brand p { display: none; }
+  .btn.primary { padding: 9px 18px; }
+}
+@media (max-width: 860px) {
+  .brand p { display: none; }
+  .top { gap: 8px; }
+  #orderList { grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); }
+  .slot button { width: 50px; height: 50px; font-size: 23px; }
+}
+@media (max-width: 520px) {
+  .btn { font-size: 15px; padding: 9px 12px; }
+  .btn.primary { font-size: 18px; padding: 11px 16px; }
+  .mons { gap: 6px; }
+  .mon small { display: none; }
+  .portrait { width: 120px; height: 120px; }
+  .bignum { font-size: 54px; }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <h1>냠냠 몬스터</h1>
+      <p>몬스터에게 잡힌 순서대로 발표해요</p>
+    </div>
+    <div class="tabs" role="tablist" aria-label="화면 고르기">
+      <button class="tab" role="tab" id="tabHunt" type="button" aria-selected="true" aria-controls="fieldWrap">몬스터 사냥</button>
+      <button class="tab" role="tab" id="tabOrder" type="button" aria-selected="false" aria-controls="orderView">발표 순서 <small id="tabCount">0/30</small></button>
+    </div>
+    <div class="status" id="status" aria-live="polite">남은 친구 <b>30</b>명</div>
+    <div class="controls">
+      <button class="btn primary" id="huntBtn" type="button">몬스터 출동!</button>
+      <button class="btn" id="autoBtn" type="button" aria-pressed="false">자동 사냥</button>
+      <button class="btn" id="soundBtn" type="button" aria-pressed="true">소리 켜짐</button>
+      <button class="btn" id="fsBtn" type="button">전체화면</button>
+      <button class="btn" id="setBtn" type="button">설정</button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <section class="field-wrap" id="fieldWrap" aria-label="몬스터 놀이터">
+      <canvas id="field"></canvas>
+      <div class="hint" id="hint"><kbd>스페이스바</kbd> 또는 <b>몬스터 출동!</b>을 누르면 몬스터가 사냥을 시작해요</div>
+
+      <div class="overlay" id="reveal" hidden>
+        <div class="card" role="dialog" aria-labelledby="revealRank">
+          <p class="rank" id="revealRank"><b>1</b>번째 발표자</p>
+          <div class="portrait" id="portraitWrap"><canvas id="portrait" width="240" height="240"></canvas></div>
+          <div class="bignum" id="revealNum">7<small>번</small></div>
+          <p class="quip" id="revealQuip">딸기맛이었어!</p>
+          <div class="autobar" id="autobar" hidden><i id="autobarFill"></i></div>
+          <div class="actions">
+            <button class="btn primary" id="nextBtn" type="button">다음 사냥</button>
+            <button class="btn ghost" id="skipBtn" type="button">결석이라 순서에서 빼기</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="overlay" id="finale" hidden>
+        <div class="card finale-card" role="dialog" aria-labelledby="finaleTitle">
+          <h2 id="finaleTitle">모두 꿀꺽! 발표 순서 완성</h2>
+          <p>몬스터가 배불러서 잠들었어요. 이 순서대로 발표해요.</p>
+          <ol class="final-list" id="finalList"></ol>
+          <textarea id="copyFallback" readonly hidden aria-label="발표 순서 텍스트"></textarea>
+          <div class="actions">
+            <button class="btn primary" id="againBtn" type="button">한 번 더 하기</button>
+            <button class="btn" id="toOrderBtn" type="button">발표 순서 탭 보기</button>
+            <button class="btn" id="copyBtn2" type="button">순서 복사</button>
+            <button class="btn" id="closeFinale" type="button">닫기</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="belly" id="orderView" role="tabpanel" aria-labelledby="tabOrder" hidden>
+      <div class="belly-head">
+        <div>
+          <h2>발표 순서</h2>
+          <p class="belly-sub">몬스터 뱃속에 들어간 순서예요</p>
+        </div>
+        <div class="actions">
+          <button class="btn" id="copyBtn" type="button">순서 복사</button>
+          <button class="btn" id="backBtn" type="button">사냥 화면으로</button>
+        </div>
+      </div>
+      <ol id="orderList"></ol>
+      <p class="tip">발표가 끝난 친구는 번호를 눌러 표시하세요.</p>
+    </section>
+  </main>
+</div>
+
+<div class="modal" id="setup" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="setupTitle">
+    <div class="sheet-head">
+      <h2 id="setupTitle">게임 준비</h2>
+      <button class="btn" id="closeSetup" type="button">닫기</button>
+    </div>
+
+    <section>
+      <label class="field-label" for="countRange">출석번호 몇 번까지 있나요?</label>
+      <div class="count-row">
+        <button class="btn" id="minusBtn" type="button" aria-label="한 명 줄이기">−</button>
+        <input type="range" id="countRange" min="1" max="30" step="1" value="30">
+        <button class="btn" id="plusBtn" type="button" aria-label="한 명 늘리기">+</button>
+        <output class="count-out" id="countOut" for="countRange">1~30번</output>
+      </div>
+    </section>
+
+    <section>
+      <p class="field-label">오늘 빠지는 번호 <span>눌러서 빼거나 다시 넣어요</span></p>
+      <div class="chips" id="chips"></div>
+    </section>
+
+    <section>
+      <p class="field-label">몬스터 고르기</p>
+      <div class="mons" id="mons"></div>
+    </section>
+
+    <section>
+      <p class="field-label">사냥 속도</p>
+      <div class="seg" id="speedSeg">
+        <button class="btn" type="button" data-speed="normal">보통 (두근두근)</button>
+        <button class="btn" type="button" data-speed="fast">빠르게</button>
+      </div>
+    </section>
+
+    <div class="sheet-foot">
+      <div>
+        <div class="join" id="joinCount">참가 <b>30</b>명</div>
+        <p class="warn" id="resetWarn" hidden>시작하면 지금까지 정한 순서는 지워져요.</p>
+      </div>
+      <button class="btn primary" id="startBtn" type="button">게임 시작!</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s);
+  const TAU = Math.PI * 2;
+  const INK = '#2d3550';
+  const STORE = 'nyam-monster-v1';
+  const PAL = ['#ff9bb5', '#ffb760', '#ffd95a', '#9bdc6a', '#5fd8bd', '#72c2ff', '#a898ff', '#f59ad6', '#ff9a7e', '#7fe0ea'];
+  const MONSTERS = {
+    jelly:  { name: '말랑이', desc: '포도젤리 몬스터', body: '#b19cff', belly: '#e6deff', line: '#7c62e6', accent: '#ffd447', eyes: 1, deco: 'antenna', fuzz: 0 },
+    fluffy: { name: '복슬이', desc: '털이 복슬복슬', body: '#6fd0ee', belly: '#d6f5fd', line: '#2e9cc4', accent: '#fff1b8', eyes: 2, deco: 'horns', fuzz: 1 },
+    dino:   { name: '쿵쿵이', desc: '꼬마 공룡', body: '#ff9f7a', belly: '#ffe4d1', line: '#e06f49', accent: '#ffc94a', eyes: 2, deco: 'spikes', fuzz: 0 },
+  };
+  const QUIPS = ['딸기맛이었어!', '한 입에 꿀꺽!', '바삭바삭 맛있다!', '음~ 꿀맛이야!', '쫀득쫀득해!', '달콤해서 녹아버렸어!', '아삭아삭!', '말랑말랑 젤리 같아!', '고소한 맛이야!', '한 입 더 먹고 싶다!'];
+  const CHAT = ['배고파~', '오늘은 누구를 먹을까?', '킁킁, 맛있는 냄새!', '숨어도 다 보여~', '냠냠 쩝쩝', '거기 서라~!', '간식 시간이다!'];
+  const SKIN = [['#ffe1c8', '#e8b994'], ['#f8cfae', '#dca57f'], ['#eebf98', '#cf9668']];
+  const HAIR = ['#3b2a22', '#5b3a26', '#26263a', '#8a5a32', '#4a2f2a'];
+  const PANTS = ['#4a5578', '#5c6b8f', '#3f4a66'];
+  const reduceMotion =matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---------- settings ----------
+  const DEFAULTS = { count: 30, absent: [], monster: 'jelly', speed: 'normal', sound: true };
+  function loadSettings() {
+    try {
+      const v = JSON.parse(localStorage.getItem(STORE));
+      if (v && typeof v.count === 'number') return { ...DEFAULTS, ...v };
+    } catch (e) {}
+    return null;
+  }
+  const saved = loadSettings();
+  const settings = saved || { ...DEFAULTS };
+  if (!MONSTERS[settings.monster]) settings.monster = 'jelly';
+  function saveSettings() { try { localStorage.setItem(STORE, JSON.stringify(settings)); } catch (e) {} }
+
+  const colorFor = (n) => PAL[(n - 1) % PAL.length];
+  function shade(hex, k) {
+    const n = parseInt(hex.slice(1), 16);
+    const f = (v) => Math.round(v * k).toString(16).padStart(2, '0');
+    return '#' + f(n >> 16) + f((n >> 8) & 255) + f(n & 255);
+  }
+  function randInt(n) {
+    try { const a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] % n; }
+    catch (e) { return Math.floor(Math.random() * n); }
+  }
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const lerp = (a, b, k) => a + (b - a) * k;
+
+  // ---------- canvas ----------
+  const cv = $('#field');
+  const ctx = cv.getContext('2d');
+  const bg = document.createElement('canvas');
+  let W = 0, H = 0, S = 1, DPR = 1;
+
+  // ---------- state ----------
+  let students = [];
+  let order = [];
+  const done = new Set();
+  let removed = 0;
+  let phase = 'idle';
+  let phaseT = 0;
+  let auto = false;
+  let revealT = 0;
+  let lastNew = null;
+  let revealKid = null;
+  const mon = { x: 0, y: 0, vx: 0, vy: 0, R: 60, mouth: 0, bulge: 0, chew: 0, target: null, say: null, lookX: 0, lookY: 0.3, wx: 0, wy: 0, wt: 0, sniffTick: 0, mode: 'walk', walkSp: 0, chatT: 3 };
+  const cam = { x: 0, y: 0, z: 1 };
+  let spot = 0, timeScale = 1;
+  let parts = [];
+  let texts = [];
+  const speedMul = () => (settings.speed === 'fast' ? 1.55 : 1);
+  const alive = () => students.filter((s) => s.alive);
+
+  // ---------- sound ----------
+  let AC = null;
+  function audio() {
+    if (!settings.sound) return null;
+    try {
+      if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+      if (AC.state === 'suspended') AC.resume();
+    } catch (e) { return null; }
+    return AC;
+  }
+  function tone(f, d, o = {}) {
+    const a = audio(); if (!a) return;
+    const t0 = a.currentTime + (o.delay || 0);
+    const osc = a.createOscillator(), g = a.createGain();
+    osc.type = o.type || 'sine';
+    osc.frequency.setValueAtTime(f, t0);
+    if (o.to) osc.frequency.exponentialRampToValueAtTime(o.to, t0 + d);
+    const v = o.vol || 0.12;
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(v, t0 + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+    osc.connect(g).connect(a.destination);
+    osc.start(t0); osc.stop(t0 + d + 0.05);
+  }
+  const SFX = {
+    wake() { tone(300, 0.25, { type: 'triangle', to: 600, vol: 0.12 }); },
+    sniff() { tone(720, 0.06, { type: 'triangle', vol: 0.06 }); tone(820, 0.06, { type: 'triangle', vol: 0.06, delay: 0.09 }); },
+    lock() { [660, 880, 1320].forEach((f, i) => tone(f, 0.13, { type: 'square', vol: 0.05, delay: i * 0.08 })); },
+    chomp() { tone(240, 0.16, { type: 'square', vol: 0.1, to: 90 }); tone(200, 0.14, { type: 'square', vol: 0.09, to: 80, delay: 0.18 }); },
+    reveal() { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.2, { type: 'triangle', vol: 0.11, delay: i * 0.07 })); },
+    finale() { [523, 523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, 0.22, { type: 'triangle', vol: 0.11, delay: i * 0.13 })); },
+    drum(f) { tone(f, 0.09, { type: 'triangle', vol: 0.1 }); tone(f * 0.5, 0.06, { type: 'square', vol: 0.04 }); },
+    pop() { tone(500, 0.08, { type: 'sine', to: 900, vol: 0.08 }); },
+  };
+
+  // ---------- setup / game ----------
+  function participants() {
+    const nums = [];
+    for (let i = 1; i <= settings.count; i++) if (!settings.absent.includes(i)) nums.push(i);
+    return nums;
+  }
+
+  function sizeActors() {
+    S = Math.max(1, Math.min(W, H));
+    const n = Math.max(students.length, 6);
+    const r = clamp(Math.sqrt((W * H) / n) * 0.21, 15, Math.max(15, S * 0.08));
+    students.forEach((s) => (s.r = r));
+    mon.R = clamp(S * 0.12, r * 1.9, r * 3);
+  }
+
+  function newGame() {
+    order = []; done.clear(); removed = 0; lastNew = null;
+    parts = []; texts = [];
+    auto = false; updateAutoBtn();
+    mon.x = W / 2; mon.y = H / 2; mon.vx = mon.vy = 0;
+    mon.mouth = 0; mon.bulge = 0; mon.chew = 0; mon.target = null; mon.say = null; mon.group = [];
+    students = participants().map((n) => ({
+      num: n, color: colorFor(n), dark: shade(colorFor(n), 0.72),
+      skin: SKIN[n % 3][0], skinLine: SKIN[n % 3][1], hair: HAIR[(n * 3) % HAIR.length],
+      style: (n * 7) % 4, pants: PANTS[n % PANTS.length], big: 1,
+      x: 0, y: 0, vx: 0, vy: 0, r: 20, scale: 1,
+      alive: true, eaten: false, panic: 0,
+      phase: Math.random() * TAU, seed: Math.random() * 100,
+      wdx: 0, wdy: 0, wt: Math.random() * 2, lookX: 0, lookY: 0.2,
+    }));
+    sizeActors();
+    for (const s of students) {
+      let best = null;
+      for (let k = 0; k < 40; k++) {
+        const x = s.r + 10 + Math.random() * Math.max(1, W - s.r * 2 - 20);
+        const y = s.r * 1.4 + 10 + Math.random() * Math.max(1, H - s.r * 2.6 - 20);
+        if (Math.hypot(x - mon.x, y - mon.y) < mon.R * 1.8) continue;
+        best = [x, y];
+        if (!students.some((o) => o !== s && o.x && Math.hypot(o.x - x, o.y - y) < s.r * 2.3)) break;
+      }
+      if (!best) best = [s.r + 10, s.r * 1.4 + 10];
+      [s.x, s.y] = best;
+    }
+    cam.x = W / 2; cam.y = H / 2; cam.z = 1; spot = 0; timeScale = 1;
+    mon.wt = 0; mon.chatT = 2;
+    $('#reveal').hidden = true;
+    $('#finale').hidden = true;
+    setPhase('idle');
+    renderOrder();
+  }
+
+  function setPhase(p) {
+    phase = p; phaseT = 0;
+    const hb = $('#huntBtn');
+    hb.disabled = ['sniff', 'chase', 'tease', 'lunge', 'eat'].includes(p);
+    hb.textContent = p === 'idle' ? '몬스터 출동!'
+      : p === 'reveal' ? (alive().length ? '다음 사냥' : '결과 보기')
+      : p === 'done' ? '한 번 더 하기' : '사냥 중…';
+    $('#hint').hidden = p !== 'idle' || auto;
+    updateStatus();
+  }
+
+  function updateStatus() {
+    const total = students.length - removed;
+    $('#status').innerHTML = `남은 친구 <b>${alive().length}</b>명 · 순서 ${order.length}/${total}`;
+    $('#tabCount').textContent = `${order.length}/${total}`;
+  }
+
+  function hunt() {
+    if (phase !== 'idle' || !alive().length) return;
+    setPhase('sniff');
+    mon.sniffDur = auto ? 0.3 : settings.speed === 'fast' ? 0.9 : 1.8;
+    mon.huntClock = 0;
+    mon.autoTotal = 2 + Math.random() * 2;   // auto: each catch takes 2-4 s
+    mon.wt = 0; mon.sniffTick = 0;
+    mon.say = { text: '킁킁… 누구를 먹을까?', t: 10 };
+    SFX.wake();
+  }
+
+  // The victim is drawn fairly at random, but kept secret: the monster walks to the
+  // victim's neighborhood and teases the whole huddle before lunging at one.
+  function pickTarget() {
+    const list = alive();
+    const tg = list[randInt(list.length)];
+    const near = list.filter((s) => s !== tg)
+      .map((s) => ({ s, d: Math.hypot(s.x - tg.x, s.y - tg.y) }))
+      .sort((a, b) => a.d - b.d);
+    let others = near.filter((o) => o.d < S * 0.45).slice(0, 6);
+    if (others.length < 4) others = near.slice(0, 4);
+    mon.target = tg;
+    mon.group = [tg, ...others.map((o) => o.s)];
+    mon.feint = null; mon.feintT = 0; mon.feintN = 0;
+    if (auto) {
+      // quick round: only 2-3 candidates
+      mon.group = [tg, ...near.slice(0, 1 + randInt(2)).map((o) => o.s)];
+      mon.say = { text: '킁킁!', t: 10 };
+      setPhase('chase');
+      return;
+    }
+    mon.say = { text: mon.group.length > 1 ? '킁킁… 저쪽에서 맛있는 냄새가!' : '킁킁… 찾았다!', t: 10 };
+    setPhase('chase');
+    SFX.wake();
+  }
+  const hunting = () => phase === 'chase' || phase === 'tease' || phase === 'lunge' || phase === 'eat';
+  function groupCenter() {
+    const g = mon.group.filter((s) => s.alive);
+    if (!g.length) return { x: mon.target.x, y: mon.target.y, spread: 0 };
+    let x = 0, y = 0;
+    for (const s of g) { x += s.x; y += s.y; }
+    x /= g.length; y /= g.length;
+    let spread = 0;
+    for (const s of g) spread = Math.max(spread, Math.hypot(s.x - x, s.y - y));
+    return { x, y, spread };
+  }
+  function standNear(px, py, dist) {
+    const dx = mon.x - px, dy = mon.y - py, d = Math.hypot(dx, dy) || 1;
+    return [px + (dx / d) * dist, py + (dy / d) * dist];
+  }
+
+  function swallow(tg) {
+    tg.eaten = true; tg.scale = 0;
+    order.push(tg.num); lastNew = tg.num;
+    mon.bulge = 1; mon.chew = 0.9;
+    SFX.chomp();
+    const mx = mon.x, my = mon.y + mon.R * 0.3;
+    const n = reduceMotion ? 6 : 18;
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * TAU, sp = S * (0.25 + Math.random() * 0.45);
+      parts.push({ x: mx, y: my, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - S * 0.25, life: 1, max: 0.8 + Math.random() * 0.4,
+        color: [tg.color, '#ffd447', '#ffffff', '#ff8fab'][i % 4], star: i % 2 === 0, size: S * (0.012 + Math.random() * 0.012) });
+    }
+    texts.push({ text: `${tg.num}번 냠!`, x: mon.x, y: mon.y - mon.R * 1.15, life: 1, max: 1.3, size: mon.R * 0.6 });
+    renderOrder(); updateStatus();
+  }
+
+  function showReveal(tg) {
+    setPhase('reveal');
+    revealT = 0;
+    $('#revealRank').innerHTML = `<b>${order.length}</b>번째 발표자`;
+    const bn = $('#revealNum');
+    bn.innerHTML = `${tg.num}<small>번</small>`;
+    bn.style.setProperty('--c', tg.color);
+    $('#portraitWrap').style.setProperty('--c', tg.color);
+    revealKid = tg;
+    const quip = QUIPS[randInt(QUIPS.length)];
+    $('#revealQuip').textContent = `${tg.num}번 친구 ${quip}`;
+    $('#nextBtn').textContent = alive().length ? (auto ? '바로 다음 사냥' : '다음 사냥') : '결과 보기';
+    $('#autobar').hidden = !auto;
+    $('#autobarFill').style.width = '0%';
+    $('#reveal').hidden = false;
+    mon.say = { text: quip, t: 2.5 };
+    SFX.reveal();
+  }
+
+  function nextRound() {
+    if (phase !== 'reveal') return;
+    $('#reveal').hidden = true;
+    if (!alive().length) { finale(); return; }
+    setPhase('idle');
+    if (auto) hunt();
+  }
+
+  function skipLast() {
+    if (phase !== 'reveal' || !order.length) return;
+    const n = order.pop();
+    removed++; lastNew = null;
+    renderOrder(); updateStatus();
+    toast(`${n}번은 결석이라 순서에서 뺐어요`);
+    nextRound();
+  }
+
+  function finale() {
+    auto = false; updateAutoBtn();
+    setPhase('done');
+    mon.say = { text: '배불러~ 잘 먹었습니다!', t: 9999 };
+    const fl = $('#finalList');
+    fl.innerHTML = order.map((n, i) => `<li><span>${i + 1}</span><b>${n}번</b></li>`).join('');
+    $('#copyFallback').hidden = true;
+    $('#finale').hidden = false;
+    SFX.finale();
+  }
+
+  // ---------- order rail ----------
+  function renderOrder() {
+    const list = $('#orderList');
+    const total = students.length - removed;
+    let html = '';
+    order.forEach((n, i) => {
+      const cls = ['slot', done.has(n) ? 'done' : '', n === lastNew ? 'new' : ''].join(' ');
+      html += `<li class="${cls}"><span class="r">${i + 1}번째</span><button type="button" data-num="${n}" style="--c:${colorFor(n)}" aria-pressed="${done.has(n)}" aria-label="${i + 1}번째 ${n}번, 발표 끝 표시">${n}</button></li>`;
+    });
+    for (let i = order.length; i < total; i++) {
+      html += `<li class="slot empty"><span class="r">${i + 1}번째</span><span class="q">?</span></li>`;
+    }
+    list.innerHTML = html;
+    lastNew = null;
+  }
+  $('#orderList').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-num]');
+    if (!b) return;
+    const n = +b.dataset.num;
+    done.has(n) ? done.delete(n) : done.add(n);
+    renderOrder();
+  });
+
+  // ---------- simulation ----------
+  // random roaming: walk, sudden dash, short pause
+  function roam(dt, sm, hyper) {
+    mon.wt -= dt;
+    const near = Math.hypot(mon.wx - mon.x, mon.wy - mon.y) < mon.R * 0.5;
+    if (mon.wt <= 0 || (near && mon.mode !== 'pause')) {
+      const r = Math.random();
+      mon.mode = r < (hyper ? 0.4 : 0.25) ? 'dash' : r < (hyper ? 0.48 : 0.4) ? 'pause' : 'walk';
+      mon.wx = mon.R + Math.random() * Math.max(1, W - mon.R * 2);
+      mon.wy = mon.R * 1.3 + Math.random() * Math.max(1, H - mon.R * 2.3);
+      mon.wt = mon.mode === 'pause' ? 0.3 + Math.random() * 0.6 : mon.mode === 'dash' ? 0.5 + Math.random() * 0.6 : 0.8 + Math.random() * 1.6;
+      mon.walkSp = S * (0.12 + Math.random() * 0.16);
+    }
+    if (mon.mode === 'pause') { steerMonster(mon.x, mon.y, 0, dt, 8); return; }
+    const sp = (mon.mode === 'dash' ? S * 0.62 : mon.walkSp) * sm * (hyper ? 1.25 : 1);
+    steerMonster(mon.wx, mon.wy, sp, dt, mon.mode === 'dash' ? 8 : 4);
+  }
+
+  function update(dt, T) {
+    const sm = speedMul();
+    const rdt = dt;
+    // slow motion just before the bite
+    let wantScale = 1;
+    if (phase === 'lunge' && mon.target && !reduceMotion && !auto) {
+      if (Math.hypot(mon.target.x - mon.x, mon.target.y - mon.y) < mon.R * 2.4) wantScale = 0.4;
+    }
+    timeScale += (wantScale - timeScale) * Math.min(1, dt * 8);
+    dt *= timeScale;
+    phaseT += dt;
+    if (phase === 'sniff' || hunting()) mon.huntClock = (mon.huntClock || 0) + dt;
+
+    if (phase === 'idle') {
+      roam(dt, sm, false);
+      mon.chatT -= dt;
+      if (mon.chatT <= 0) {
+        if (!mon.say) mon.say = { text: CHAT[randInt(CHAT.length)], t: 1.8 };
+        mon.chatT = 4 + Math.random() * 4;
+      }
+    } else if (phase === 'sniff') {
+      roam(dt, sm, true);
+      mon.sniffTick -= dt;
+      if (mon.sniffTick <= 0) { SFX.sniff(); mon.sniffTick = 0.45; }
+      if (phaseT > mon.sniffDur) pickTarget();
+    } else if (phase === 'chase') {
+      // walk over to the huddle
+      const gc = groupCenter();
+      const stop = mon.R * 1.5 + gc.spread;
+      const [px, py] = standNear(gc.x, gc.y, stop);
+      steerMonster(px, py, S * 0.32 * sm * (1 + phaseT * 0.3) * (auto ? 2.5 : 1), dt, auto ? 9 : 5);
+      if (Math.hypot(mon.x - px, mon.y - py) < mon.R * 0.4 || phaseT > (auto ? 1 : 5)) {
+        setPhase('tease');
+        // decision time: 5-7 s normally, whatever is left of 2-4 s in auto
+        const total = auto ? Math.max(0.6, mon.autoTotal - mon.huntClock - 0.35) : 5 + Math.random() * 2;
+        const first = auto ? 0 : 1;              // look at everyone before anyone is safe
+        mon.finalPause = auto ? Math.min(0.6, total * 0.4) : 1.6;
+        const elims = Math.max(0, mon.group.length - 2);
+        mon.elimEvery = elims ? (total - first - mon.finalPause) / elims : 0;
+        mon.elimT = first + mon.elimEvery;
+        mon.finalT = elims ? -1 : total;
+        mon.say = { text: `음~ ${mon.group.length}명 중에 누구를 먹을까…?`, t: 10 };
+      }
+    } else if (phase === 'tease') {
+      // lean toward one kid after another, faster and faster
+      mon.feintT -= dt;
+      if (mon.feintT <= 0) {
+        const opts = mon.group.filter((s) => s !== mon.feint);
+        mon.feint = opts.length ? opts[randInt(opts.length)] : mon.group[0];
+        mon.feintN++;
+        mon.feintT = auto ? 0.2 : Math.max(0.18, 0.55 - phaseT * 0.06);
+        SFX.drum(260 + mon.feintN * 30);
+        if (mon.feintN === 3 && mon.group.length > 2) mon.say = { text: '너…? 아니면 너…?', t: 10 };
+      }
+      // let candidates go one by one until two are left
+      if (mon.group.length > 2) {
+        mon.elimT -= dt;
+        if (mon.elimT <= 0) {
+          const safe = mon.group.filter((s) => s !== mon.target);
+          const out = safe[randInt(safe.length)];
+          mon.group = mon.group.filter((s) => s !== out);
+          if (mon.feint === out) mon.feintT = 0;
+          texts.push({ text: '휴~', x: out.x, y: out.y - out.r * 1.6, life: 1, max: 1, size: out.r * 0.9, color: '#4fa3d9' });
+          SFX.pop();
+          mon.elimT = mon.elimEvery;
+          if (mon.group.length === 2) {
+            const [a, b] = mon.group;
+            mon.say = { text: `${a.num}번이냐, ${b.num}번이냐…!`, t: 10 };
+            mon.finalT = mon.finalPause;
+          }
+        }
+      } else if (mon.finalT < 0) {
+        mon.finalT = 0.8;
+      }
+      const f = mon.feint;
+      const [px, py] = standNear(f.x, f.y, mon.R * 1.45 + f.r);
+      steerMonster(px, py, S * 0.55 * sm, dt, 9);
+      if (mon.finalT >= 0) mon.finalT -= dt;
+      if (mon.group.length <= 2 && mon.finalT >= -0.5 && mon.finalT <= 0) {
+        setPhase('lunge');
+        mon.say = { text: `${mon.target.num}번, 너다!`, t: 10 };
+        SFX.lock();
+      }
+    } else if (phase === 'lunge') {
+      const tg = mon.target;
+      const sp = S * 0.6 * sm * (1 + phaseT * 0.8) * (auto ? 3 : 1);
+      steerMonster(tg.x, tg.y, sp, dt, 9);
+      const d = Math.hypot(tg.x - mon.x, tg.y - mon.y);
+      if (d < mon.R * 0.8 + tg.r * 0.5) {
+        tg.alive = false; tg.ex = tg.x; tg.ey = tg.y;
+        mon.vx = mon.vy = 0;
+        mon.say = null;
+        setPhase('eat');
+      }
+    } else if (phase === 'eat') {
+      const tg = mon.target;
+      const eatDur = auto ? 0.18 : 0.45;
+      const k = Math.min(1, phaseT / eatDur), e = k * k;
+      tg.x = lerp(tg.ex, mon.x, e);
+      tg.y = lerp(tg.ey, mon.y + mon.R * 0.3, e);
+      tg.scale = 1 - e * 0.85;
+      if (k >= 1 && !tg.eaten) swallow(tg);
+      if (tg.eaten && auto && phaseT > eatDur + 0.2) {
+        // turbo: skip the card and go straight to the next kid
+        mon.group = []; mon.say = null;
+        if (!alive().length) finale();
+        else { setPhase('idle'); hunt(); }
+      } else if (tg.eaten && phaseT > eatDur + 0.85) showReveal(tg);
+    } else {
+      mon.vx *= Math.max(0, 1 - dt * 6);
+      mon.vy *= Math.max(0, 1 - dt * 6);
+      mon.x += mon.vx * dt; mon.y += mon.vy * dt;
+    }
+
+    if (phase === 'reveal' && auto) {
+      revealT += dt;
+      const dur = settings.speed === 'fast' ? 1.8 : 2.8;
+      $('#autobarFill').style.width = Math.min(100, (revealT / dur) * 100) + '%';
+      if (revealT > dur) nextRound();
+    }
+
+    // monster face
+    let mt = 0;
+    if (phase === 'idle' && mon.mode === 'dash') mt = 0.35;
+    else if (phase === 'sniff') mt = 0.14 + 0.08 * Math.sin(T * 12);
+    else if (phase === 'chase') mt = 0.18;
+    else if (phase === 'tease') mt = 0.3 + 0.2 * Math.sin(T * 9);
+    else if (phase === 'lunge') {
+      const d = Math.hypot(mon.target.x - mon.x, mon.target.y - mon.y);
+      mt = 0.35 + 0.65 * clamp(1 - (d - mon.R) / (S * 0.35), 0, 1);
+    } else if (phase === 'eat' && !(mon.target && mon.target.eaten)) mt = 1;
+    if (mon.chew > 0) { mon.chew -= dt; mt = Math.sin(T * 22) > 0 ? 0.4 : 0.04; }
+    mon.mouth += (mt - mon.mouth) * Math.min(1, dt * 14);
+    mon.bulge = Math.max(0, mon.bulge - dt * 0.7);
+    let lx = Math.sin(T * 0.7) * 0.4, ly = 0.25;
+    if ((phase === 'idle' || phase === 'sniff') && Math.hypot(mon.vx, mon.vy) > S * 0.03) { lx = mon.vx; ly = mon.vy; }
+    else if (phase === 'chase') { const gc = groupCenter(); lx = gc.x - mon.x; ly = gc.y - mon.y; }
+    else if (phase === 'tease' && mon.feint) { lx = mon.feint.x - mon.x; ly = mon.feint.y - mon.y; }
+    else if ((phase === 'lunge' || phase === 'eat') && mon.target) { lx = mon.target.x - mon.x; ly = mon.target.y - mon.y; }
+    const ll = Math.hypot(lx, ly) || 1;
+    const lim = Math.min(1, ll / 1);
+    mon.lookX += ((lx / ll) * lim - mon.lookX) * Math.min(1, dt * 8);
+    mon.lookY += ((ly / ll) * lim - mon.lookY) * Math.min(1, dt * 8);
+    if (mon.say) { mon.say.t -= dt; if (mon.say.t <= 0) mon.say = null; }
+
+    updateStudents(dt, sm);
+
+    parts = parts.filter((p) => {
+      p.life -= dt / p.max;
+      p.vy += S * 1.2 * dt;
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      return p.life > 0;
+    });
+    texts = texts.filter((t) => { t.life -= dt / t.max; t.y -= S * 0.08 * dt; return t.life > 0; });
+
+    // camera: zoom in on the catch
+    let tz = 1, fx = W / 2, fy = H / 2;
+    const tg = mon.target;
+    if (!reduceMotion && !auto && tg && hunting()) {
+      if (phase === 'chase' || phase === 'tease') {
+        const gc = groupCenter();
+        if (phase === 'tease' || Math.hypot(gc.x - mon.x, gc.y - mon.y) < S * 0.5) {
+          const span = Math.max(Math.abs(gc.x - mon.x) + gc.spread, Math.abs(gc.y - mon.y) + gc.spread) * 2 + mon.R * 3.5;
+          tz = clamp(S / span, 1, 1.6);
+          fx = (gc.x * 2 + mon.x) / 3; fy = (gc.y * 2 + mon.y) / 3 - mon.R * 0.3;
+        }
+      } else if (phase === 'eat' || Math.hypot(tg.x - mon.x, tg.y - mon.y) < S * 0.45) {
+        tz = 1.5; fx = (mon.x + tg.x) / 2; fy = (mon.y + tg.y) / 2 - mon.R * 0.3;
+      }
+    }
+    const ck = Math.min(1, rdt * 3.5);
+    cam.z += (tz - cam.z) * ck; cam.x += (fx - cam.x) * ck; cam.y += (fy - cam.y) * ck;
+    const hw = W / (2 * cam.z), hh = H / (2 * cam.z);
+    cam.x = clamp(cam.x, hw, W - hw); cam.y = clamp(cam.y, hh, H - hh);
+    spot += ((hunting() ? 1 : 0) - spot) * Math.min(1, rdt * 4);
+  }
+
+  function steerMonster(tx, ty, sp, dt, acc) {
+    const dx = tx - mon.x, dy = ty - mon.y, d = Math.hypot(dx, dy) || 1;
+    const want = Math.min(sp, d * 4);
+    mon.vx += ((dx / d) * want - mon.vx) * Math.min(1, dt * acc);
+    mon.vy += ((dy / d) * want - mon.vy) * Math.min(1, dt * acc);
+    mon.x = clamp(mon.x + mon.vx * dt, mon.R, W - mon.R);
+    mon.y = clamp(mon.y + mon.vy * dt, mon.R * 1.3, H - mon.R);
+  }
+
+  function updateStudents(dt, sm) {
+    const calm = S * 0.05;
+    const awake = phase === 'sniff' || phase === 'chase' || phase === 'tease' || phase === 'lunge';
+    const huddling = phase === 'chase' || phase === 'tease';
+    const gc = huddling ? groupCenter() : null;
+    const live = alive();
+    for (const s of live) {
+      s.wt -= dt;
+      if (s.wt <= 0) {
+        const a = Math.random() * TAU, go = Math.random() < 0.75;
+        s.wdx = go ? Math.cos(a) : 0; s.wdy = go ? Math.sin(a) : 0;
+        s.wt = 1 + Math.random() * 2.5;
+      }
+      let dx = s.wdx * calm, dy = s.wdy * calm, acc = 3, panic = 0;
+      const mx = s.x - mon.x, my = s.y - mon.y, md = Math.hypot(mx, my) || 1;
+      const isT = s === mon.target && phase === 'lunge';
+      const cand = huddling && mon.group.includes(s);
+      if (cand) {
+        // candidates freeze together and tremble
+        const cx = gc.x - s.x, cy = gc.y - s.y, cd = Math.hypot(cx, cy) || 1;
+        const sp = cd > s.r * 2 ? S * 0.12 * sm : 0;
+        dx = (cx / cd) * sp; dy = (cy / cd) * sp;
+        acc = 6; panic = 1;
+      } else if (awake) {
+        const fr = isT ? Infinity : S * 0.3;
+        if (md < fr) {
+          const sp = isT ? S * 0.3 * sm : S * 0.2 * sm * (1 - (md / fr) * 0.5);
+          dx = (mx / md) * sp; dy = (my / md) * sp;
+          const m = S * 0.14;
+          if (s.x < m) dx += sp * (1 - s.x / m) * 1.3;
+          if (s.x > W - m) dx -= sp * (1 - (W - s.x) / m) * 1.3;
+          if (s.y < m) dy += sp * (1 - s.y / m) * 1.3;
+          if (s.y > H - m) dy -= sp * (1 - (H - s.y) / m) * 1.3;
+          acc = isT ? 9 : 6;
+          panic = isT ? 1 : 0.6;
+        }
+      } else if (phase === 'idle') {
+        const fr = S * 0.24;
+        if (md < fr) {
+          const sp = S * 0.14 * sm * (1 - (md / fr) * 0.5);
+          dx = (mx / md) * sp; dy = (my / md) * sp; acc = 5;
+          panic = md < S * 0.15 ? 0.5 : 0;
+        }
+      }
+      s.big += ((isT ? 1.35 : cand ? 1.15 : 1) - s.big) * Math.min(1, dt * 6);
+      s.vx += (dx - s.vx) * Math.min(1, dt * acc);
+      s.vy += (dy - s.vy) * Math.min(1, dt * acc);
+      s.x += s.vx * dt; s.y += s.vy * dt;
+      s.panic += (panic - s.panic) * Math.min(1, dt * 5);
+      const sp = Math.hypot(s.vx, s.vy);
+      s.phase += dt * (5 + (sp / S) * 40);
+      let lx = s.vx, ly = s.vy;
+      if (s.panic > 0.3) { lx = -mx; ly = -my; }
+      const ll = Math.hypot(lx, ly);
+      if (ll > 0.01) {
+        s.lookX += (lx / ll - s.lookX) * Math.min(1, dt * 8);
+        s.lookY += (ly / ll - s.lookY) * Math.min(1, dt * 8);
+      }
+    }
+    // keep apart
+    for (let i = 0; i < live.length; i++) {
+      const a = live[i];
+      for (let j = i + 1; j < live.length; j++) {
+        const b = live[j];
+        const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 0.01;
+        const min = a.r + b.r + 2;
+        if (d < min) {
+          const p = (min - d) / 2, ux = dx / d, uy = dy / d;
+          a.x -= ux * p; a.y -= uy * p; b.x += ux * p; b.y += uy * p;
+        }
+      }
+      if (!(a === mon.target && phase === 'lunge')) {
+        const dx = a.x - mon.x, dy = a.y - mon.y, d = Math.hypot(dx, dy) || 0.01;
+        const min = mon.R * 0.95 + a.r;
+        if (d < min) { a.x += (dx / d) * (min - d); a.y += (dy / d) * (min - d); }
+      }
+    }
+    for (const s of live) {
+      const minX = s.r * 0.9 + 6, maxX = W - s.r * 0.9 - 6, minY = s.r * 1.3 * s.big + 8, maxY = H - s.r * 1.1 - 6;
+      if (s.x < minX) { s.x = minX; s.vx = Math.abs(s.vx); s.wdx = Math.abs(s.wdx); }
+      if (s.x > maxX) { s.x = maxX; s.vx = -Math.abs(s.vx); s.wdx = -Math.abs(s.wdx); }
+      if (s.y < minY) { s.y = minY; s.vy = Math.abs(s.vy); s.wdy = Math.abs(s.wdy); }
+      if (s.y > maxY) { s.y = maxY; s.vy = -Math.abs(s.vy); s.wdy = -Math.abs(s.wdy); }
+    }
+  }
+
+  // ---------- drawing ----------
+  function ell(c, x, y, rx, ry) { c.beginPath(); c.ellipse(x, y, Math.max(0.1, rx), Math.max(0.1, ry), 0, 0, TAU); }
+  function rrect(c, x, y, w, h, r) {
+    c.beginPath(); c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
+  }
+  const font = (px) => `${Math.round(px)}px Jua, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif`;
+
+  function blobPath(c, R, t, fuzz) {
+    c.beginPath();
+    const N = 72;
+    for (let i = 0; i <= N; i++) {
+      const a = (i / N) * TAU;
+      let r = R * (1 + 0.035 * Math.sin(3 * a + t * 2.4) + 0.025 * Math.sin(5 * a - t * 1.7));
+      if (fuzz) r += R * 0.06 * Math.abs(Math.sin(9 * a + t * 0.6));
+      const x = Math.cos(a) * r * 1.05;
+      const y = Math.sin(a) * r * (Math.sin(a) > 0 ? 0.92 : 1);
+      i ? c.lineTo(x, y) : c.moveTo(x, y);
+    }
+    c.closePath();
+  }
+
+  function drawMonster(c, type, R, t, o) {
+    const M = MONSTERS[type];
+    const breathe = o.sleep ? Math.sin(t * 1.6) * 0.025 : 0;
+    c.save();
+    c.scale(1 + 0.16 * o.bulge + breathe, 1 - 0.05 * o.bulge - breathe * 0.5);
+    c.lineJoin = 'round'; c.lineCap = 'round';
+    // feet
+    c.fillStyle = M.line;
+    ell(c, -R * 0.45, R * 0.86, R * 0.27, R * 0.15); c.fill();
+    ell(c, R * 0.45, R * 0.86, R * 0.27, R * 0.15); c.fill();
+    // ornaments behind the body
+    c.lineWidth = R * 0.05; c.strokeStyle = M.line; c.fillStyle = M.accent;
+    if (M.deco === 'spikes') {
+      for (let i = 0; i < 5; i++) {
+        const a = -Math.PI * 0.82 + i * ((Math.PI * 0.64) / 4);
+        const bx = Math.cos(a) * R * 0.9, by = Math.sin(a) * R * 0.9;
+        const tx = Math.cos(a) * R * 1.26, ty = Math.sin(a) * R * 1.26;
+        const px = -Math.sin(a) * R * 0.15, py = Math.cos(a) * R * 0.15;
+        c.beginPath(); c.moveTo(bx + px, by + py); c.lineTo(tx, ty); c.lineTo(bx - px, by - py); c.closePath();
+        c.fill(); c.stroke();
+      }
+    } else if (M.deco === 'horns') {
+      for (const k of [-1, 1]) {
+        c.beginPath();
+        c.moveTo(k * R * 0.28, -R * 0.82);
+        c.quadraticCurveTo(k * R * 0.45, -R * 1.38, k * R * 0.72, -R * 1.25);
+        c.quadraticCurveTo(k * R * 0.66, -R * 0.98, k * R * 0.64, -R * 0.66);
+        c.closePath(); c.fill(); c.stroke();
+      }
+    } else if (M.deco === 'antenna') {
+      const sway = Math.sin(t * 3) * R * 0.14;
+      c.lineWidth = R * 0.06;
+      c.beginPath(); c.moveTo(0, -R * 0.9); c.quadraticCurveTo(sway * 0.4, -R * 1.25, sway, -R * 1.4); c.stroke();
+      c.lineWidth = R * 0.045;
+      ell(c, sway, -R * 1.47, R * 0.14, R * 0.14); c.fill(); c.stroke();
+    }
+    // body
+    blobPath(c, R, t, M.fuzz);
+    c.fillStyle = M.body; c.fill();
+    c.lineWidth = R * 0.06; c.strokeStyle = M.line; c.stroke();
+    ell(c, 0, R * 0.4, R * 0.58, R * 0.42); c.fillStyle = M.belly; c.fill();
+    // cheeks
+    c.fillStyle = 'rgba(255,110,150,0.42)';
+    ell(c, -R * 0.62, R * 0.02, R * 0.15, R * 0.09); c.fill();
+    ell(c, R * 0.62, R * 0.02, R * 0.15, R * 0.09); c.fill();
+    // eyes
+    const eyes = M.eyes === 1 ? [[0, -R * 0.4, R * 0.3]] : [[-R * 0.3, -R * 0.38, R * 0.2], [R * 0.3, -R * 0.38, R * 0.2]];
+    for (const [ex, ey, er] of eyes) {
+      if (o.sleep) {
+        c.strokeStyle = INK; c.lineWidth = R * 0.05;
+        c.beginPath(); c.arc(ex, ey - er * 0.3, er * 0.7, 0.15 * Math.PI, 0.85 * Math.PI); c.stroke();
+      } else {
+        ell(c, ex, ey, er, er * 1.05); c.fillStyle = '#fff'; c.fill();
+        c.lineWidth = R * 0.035; c.strokeStyle = M.line; c.stroke();
+        const px = ex + o.lookX * er * 0.38, py = ey + o.lookY * er * 0.38;
+        ell(c, px, py, er * 0.55, er * 0.6); c.fillStyle = INK; c.fill();
+        ell(c, px - er * 0.18, py - er * 0.22, er * 0.18, er * 0.18); c.fillStyle = '#fff'; c.fill();
+      }
+    }
+    // mouth
+    const my = R * 0.3, m = o.mouth;
+    if (m < 0.06) {
+      c.strokeStyle = INK; c.lineWidth = R * 0.05;
+      c.beginPath(); c.arc(0, my - R * 0.14, R * 0.17, 0.2 * Math.PI, 0.8 * Math.PI); c.stroke();
+    } else {
+      const mw = R * 0.36, mh = R * (0.06 + 0.34 * m);
+      ell(c, 0, my, mw, mh); c.fillStyle = '#6b2747'; c.fill();
+      c.save(); c.clip();
+      ell(c, 0, my + mh * 0.8, mw * 0.62, mh * 0.5); c.fillStyle = '#ff8fb1'; c.fill();
+      if (m > 0.25) {
+        c.fillStyle = '#fff';
+        for (const k of [-1, 1]) {
+          c.beginPath();
+          c.moveTo(k * mw * 0.15, my - mh * 1.1);
+          c.lineTo(k * mw * 0.55, my - mh * 1.1);
+          c.lineTo(k * mw * 0.35, my - mh + R * 0.12);
+          c.closePath(); c.fill();
+        }
+      }
+      c.restore();
+      ell(c, 0, my, mw, mh); c.lineWidth = R * 0.04; c.strokeStyle = M.line; c.stroke();
+    }
+    c.restore();
+  }
+
+  function drawStudent(c, s, t) {
+    const r = s.r * s.scale * (s.big || 1);
+    if (r < 0.6) return;
+    const sp = Math.hypot(s.vx, s.vy), moving = sp > S * 0.015;
+    const scared = s.panic > 0.35;
+    const outline = Math.max(1.2, r * 0.06);
+    c.save();
+    c.translate(s.x, s.y);
+    c.fillStyle = 'rgba(46,90,40,0.2)';
+    ell(c, 0, r * 1.02, r * 0.62, r * 0.16); c.fill();
+    const hop = moving ? Math.abs(Math.sin(s.phase)) * r * (0.08 + 0.14 * s.panic) : Math.sin(t * 2.2 + s.seed) * r * 0.02;
+    c.translate(scared ? Math.sin(t * 40 + s.seed) * r * 0.035 : 0, -hop);
+    c.lineCap = 'round'; c.lineJoin = 'round';
+    const sw = moving ? Math.sin(s.phase) : 0;
+    // legs and shoes
+    c.strokeStyle = s.pants; c.lineWidth = r * 0.2;
+    c.beginPath();
+    c.moveTo(-r * 0.2, r * 0.55); c.lineTo(-r * 0.2 + sw * r * 0.14, r * 0.9);
+    c.moveTo(r * 0.2, r * 0.55); c.lineTo(r * 0.2 - sw * r * 0.14, r * 0.9);
+    c.stroke();
+    c.fillStyle = '#3a3f55';
+    ell(c, -r * 0.22 + sw * r * 0.14, r * 0.97, r * 0.15, r * 0.08); c.fill();
+    ell(c, r * 0.22 - sw * r * 0.14, r * 0.97, r * 0.15, r * 0.08); c.fill();
+    // arms (raised when scared)
+    for (const k of [-1, 1]) {
+      const hx = scared ? k * r * 0.82 : k * r * 0.64;
+      const hy = scared ? -r * 0.42 + Math.sin(t * 22 + k) * r * 0.08 : r * 0.48 + k * sw * r * 0.1;
+      c.strokeStyle = s.color; c.lineWidth = r * 0.18;
+      c.beginPath(); c.moveTo(k * r * 0.4, r * 0.08); c.lineTo(hx, hy); c.stroke();
+      c.fillStyle = s.skin; ell(c, hx, hy, r * 0.1, r * 0.1); c.fill();
+    }
+    // shirt with number
+    rrect(c, -r * 0.5, -r * 0.08, r, r * 0.72, r * 0.22);
+    c.fillStyle = s.color; c.fill(); c.lineWidth = outline; c.strokeStyle = s.dark; c.stroke();
+    c.fillStyle = '#fff';
+    c.beginPath(); c.moveTo(-r * 0.17, -r * 0.08); c.lineTo(0, r * 0.07); c.lineTo(r * 0.17, -r * 0.08); c.closePath(); c.fill();
+    c.font = font(r * 0.5); c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.lineWidth = r * 0.13; c.strokeStyle = s.dark; c.strokeText(String(s.num), 0, r * 0.36);
+    c.fillStyle = '#fff'; c.fillText(String(s.num), 0, r * 0.36);
+    // hair behind the head
+    c.fillStyle = s.hair;
+    if (s.style === 2) { rrect(c, -r * 0.6, -r * 1.0, r * 1.2, r * 0.88, r * 0.36); c.fill(); }
+    if (s.style === 1) { for (const k of [-1, 1]) { ell(c, k * r * 0.62, -r * 0.42, r * 0.17, r * 0.23); c.fill(); } }
+    // head
+    ell(c, 0, -r * 0.55, r * 0.5, r * 0.48);
+    c.fillStyle = s.skin; c.fill(); c.lineWidth = outline; c.strokeStyle = s.skinLine; c.stroke();
+    // hair on top with a fringe
+    c.fillStyle = s.hair;
+    c.beginPath();
+    c.arc(0, -r * 0.58, r * 0.53, Math.PI * 0.98, Math.PI * 2.02);
+    c.quadraticCurveTo(r * 0.44, -r * 0.8, r * 0.16, -r * 0.74);
+    c.quadraticCurveTo(0, -r * 0.84, -r * 0.2, -r * 0.74);
+    c.quadraticCurveTo(-r * 0.46, -r * 0.8, -r * 0.53, -r * 0.55);
+    c.closePath(); c.fill();
+    if (s.style === 3) {
+      for (const k of [-0.25, 0, 0.25]) {
+        c.beginPath(); c.moveTo((k - 0.11) * r, -r * 1.02); c.lineTo(k * r * 1.2, -r * 1.25); c.lineTo((k + 0.11) * r, -r * 1.02); c.closePath(); c.fill();
+      }
+    }
+    if (s.style === 1) { c.fillStyle = '#ff5d8f'; for (const k of [-1, 1]) { ell(c, k * r * 0.5, -r * 0.66, r * 0.09, r * 0.06); c.fill(); } }
+    // face
+    const ey = -r * 0.48, lx = s.lookX * r * 0.03, ly = s.lookY * r * 0.03;
+    for (const k of [-1, 1]) {
+      const ex = k * r * 0.18;
+      if (scared) {
+        ell(c, ex, ey, r * 0.1, r * 0.11); c.fillStyle = '#fff'; c.fill();
+        c.lineWidth = Math.max(1, r * 0.03); c.strokeStyle = INK; c.stroke();
+        ell(c, ex + lx, ey + ly, r * 0.04, r * 0.04); c.fillStyle = INK; c.fill();
+      } else {
+        ell(c, ex + lx, ey + ly, r * 0.06, r * 0.075); c.fillStyle = INK; c.fill();
+        ell(c, ex + lx - r * 0.02, ey + ly - r * 0.025, r * 0.022, r * 0.022); c.fillStyle = '#fff'; c.fill();
+      }
+    }
+    c.fillStyle = 'rgba(255,110,150,0.4)';
+    ell(c, -r * 0.31, -r * 0.37, r * 0.09, r * 0.05); c.fill();
+    ell(c, r * 0.31, -r * 0.37, r * 0.09, r * 0.05); c.fill();
+    if (scared) {
+      ell(c, 0, -r * 0.3, r * 0.07, r * 0.09); c.fillStyle = '#6b2747'; c.fill();
+      c.fillStyle = '#9ad8ff';
+      c.beginPath(); c.moveTo(r * 0.62, -r * 0.98);
+      c.quadraticCurveTo(r * 0.76, -r * 0.72, r * 0.62, -r * 0.66);
+      c.quadraticCurveTo(r * 0.48, -r * 0.72, r * 0.62, -r * 0.98); c.fill();
+    } else {
+      c.strokeStyle = INK; c.lineWidth = Math.max(1, r * 0.045);
+      c.beginPath(); c.arc(0, -r * 0.39, r * 0.08, 0.2 * Math.PI, 0.8 * Math.PI); c.stroke();
+    }
+    c.restore();
+  }
+
+  function drawTargetMarks(c, s, t) {
+    const r = s.r * (s.big || 1);
+    const pulse = 1 + Math.sin(t * 10) * 0.08;
+    c.save();
+    c.strokeStyle = '#ff5d8f'; c.lineWidth = 3; c.setLineDash([7, 5]); c.lineDashOffset = -t * 30;
+    ell(c, s.x, s.y + r * 1.02, r * 0.95 * pulse, r * 0.3 * pulse); c.stroke();
+    c.restore();
+  }
+
+  // hot = the real victim (pink), eyed = the kid the monster is leaning toward right now
+  function drawTargetTag(c, s, t, hot, eyed) {
+    const r = s.r * (s.big || 1) * s.scale;
+    const fs = Math.max(hot ? 18 : 15, s.r * (hot ? 0.85 : 0.65));
+    const label = hot ? `${s.num}번!` : `${s.num}번?`;
+    const bgc = hot ? '#ff5d8f' : eyed ? '#ff9a3c' : '#ffd447';
+    const fgc = hot ? '#ffffff' : INK;
+    c.save();
+    c.font = font(fs);
+    const w = c.measureText(label).width + fs * 0.9, h = fs * 1.45;
+    const x = s.x;
+    const bounce = hot || eyed ? Math.abs(Math.sin(t * 7)) * 5 : 0;
+    const y = Math.max(4, s.y - r * 1.35 - h - 10 - bounce);
+    rrect(c, x - w / 2, y, w, h, h / 2); c.fillStyle = bgc; c.fill();
+    c.lineWidth = 3; c.strokeStyle = hot ? '#fff' : INK; c.stroke();
+    c.beginPath(); c.moveTo(x - 8, y + h - 1); c.lineTo(x, y + h + 9); c.lineTo(x + 8, y + h - 1); c.closePath();
+    c.fillStyle = bgc; c.fill();
+    c.fillStyle = fgc; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText(label, x, y + h / 2 + 1);
+    c.restore();
+  }
+
+  // Speech bubble placed around the monster (screen coords) wherever it covers
+  // the fewest kids' number tags: above, below, left or right.
+  let lastBubbleSide = 'up';
+  function drawBubble(c, text, mx, my, R, obstacles) {
+    const fs = clamp(S * 0.04, 14, 24);
+    c.font = font(fs);
+    const w = c.measureText(text).width + fs * 1.3, h = fs * 1.9, gap = 14;
+    const spots = [
+      { side: 'up', x: mx - w / 2, y: my - R * 1.5 - h - gap },
+      { side: 'down', x: mx - w / 2, y: my + R * 1.15 + gap },
+      { side: 'left', x: mx - R * 1.25 - w - gap, y: my - R * 0.3 - h / 2 },
+      { side: 'right', x: mx + R * 1.25 + gap, y: my - R * 0.3 - h / 2 },
+    ];
+    let best = null;
+    spots.forEach((p, i) => {
+      const bx = clamp(p.x, 6, W - w - 6), by = clamp(p.y, 6, H - h - 6);
+      let score = (Math.abs(bx - p.x) + Math.abs(by - p.y)) * 3 + i;   // prefer spots that fit, then 'up'
+      for (const o of obstacles) {
+        const ox = Math.max(0, Math.min(bx + w, o.x + o.w) - Math.max(bx, o.x));
+        const oy = Math.max(0, Math.min(by + h, o.y + o.h) - Math.max(by, o.y));
+        score += ox * oy;
+      }
+      if (p.side === lastBubbleSide) score -= 300;   // don't flicker between sides
+      if (!best || score < best.score) best = { ...p, bx, by, score };
+    });
+    const { bx, by, side } = best;
+    lastBubbleSide = side;
+    c.save();
+    c.fillStyle = '#fff'; c.strokeStyle = INK; c.lineWidth = 2.5;
+    rrect(c, bx, by, w, h, h / 2); c.fill(); c.stroke();
+    // tail toward the monster
+    c.beginPath();
+    if (side === 'up' || side === 'down') {
+      const tx = clamp(mx, bx + 18, bx + w - 18);
+      const ey = side === 'up' ? by + h : by, dir = side === 'up' ? 1 : -1;
+      c.moveTo(tx - 8, ey - dir); c.lineTo(tx, ey + dir * 10); c.lineTo(tx + 8, ey - dir);
+    } else {
+      const ty = clamp(my - R * 0.3, by + h * 0.3, by + h * 0.7);
+      const ex = side === 'left' ? bx + w : bx, dir = side === 'left' ? 1 : -1;
+      c.moveTo(ex - dir, ty - 7); c.lineTo(ex + dir * 10, ty); c.lineTo(ex - dir, ty + 7);
+    }
+    c.closePath(); c.fill(); c.stroke();
+    rrect(c, bx + 3, by + 3, w - 6, h - 6, (h - 6) / 2); c.fill();
+    c.fillStyle = INK; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText(text, bx + w / 2, by + h / 2 + 1);
+    c.restore();
+  }
+
+  function star(c, x, y, R) {
+    c.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + (i * Math.PI) / 5, r = i % 2 ? R * 0.45 : R;
+      c.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+    }
+    c.closePath();
+  }
+
+  function paintBackground() {
+    bg.width = Math.round(W * DPR); bg.height = Math.round(H * DPR);
+    const b = bg.getContext('2d');
+    b.setTransform(DPR, 0, 0, DPR, 0, 0);
+    b.fillStyle = '#b8e39c'; b.fillRect(0, 0, W, H);
+    const band = Math.max(40, S * 0.11);
+    b.fillStyle = 'rgba(255,255,255,0.13)';
+    for (let x = 0; x < W; x += band * 2) b.fillRect(x, 0, band, H);
+    const g = b.createRadialGradient(W / 2, H / 2, S * 0.2, W / 2, H / 2, Math.max(W, H) * 0.75);
+    g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(80,140,60,0.18)');
+    b.fillStyle = g; b.fillRect(0, 0, W, H);
+    const n = Math.round((W * H) / 9000);
+    const fl = ['#ffffff', '#ffd447', '#ff9bb5', '#a898ff'];
+    for (let i = 0; i < n; i++) {
+      const x = Math.random() * W, y = Math.random() * H;
+      if (i % 3 === 0) {
+        const s = 3 + Math.random() * 3;
+        b.fillStyle = fl[i % fl.length];
+        for (let p = 0; p < 5; p++) { const a = (p / 5) * TAU; ell(b, x + Math.cos(a) * s, y + Math.sin(a) * s, s * 0.75, s * 0.75); b.fill(); }
+        b.fillStyle = '#ffb347'; ell(b, x, y, s * 0.6, s * 0.6); b.fill();
+      } else {
+        b.strokeStyle = 'rgba(70,140,60,0.45)'; b.lineWidth = 1.6; b.lineCap = 'round';
+        b.beginPath(); b.moveTo(x - 4, y - 6); b.lineTo(x - 1, y); b.moveTo(x, y - 8); b.lineTo(x, y); b.moveTo(x + 4, y - 6); b.lineTo(x + 1, y); b.stroke();
+      }
+    }
+  }
+
+  function drawMon(T) {
+    const msp = Math.hypot(mon.vx, mon.vy);
+    const hop = msp > S * 0.05 ? Math.abs(Math.sin(T * 11)) * mon.R * 0.08 : Math.sin(T * 2) * mon.R * 0.02;
+    ctx.save();
+    ctx.fillStyle = 'rgba(46,90,40,0.2)';
+    ell(ctx, mon.x, mon.y + mon.R * 0.95, mon.R * 0.9, mon.R * 0.22); ctx.fill();
+    ctx.translate(mon.x, mon.y - hop);
+    drawMonster(ctx, settings.monster, mon.R, T, {
+      sleep: phase === 'done', mouth: mon.mouth, lookX: mon.lookX, lookY: mon.lookY, bulge: mon.bulge,
+    });
+    ctx.restore();
+  }
+
+  function draw(T) {
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.save();
+    ctx.translate(W / 2, H / 2); ctx.scale(cam.z, cam.z); ctx.translate(-cam.x, -cam.y);
+    ctx.drawImage(bg, 0, 0, W, H);
+    const tg = mon.target;
+    const focus = hunting() && tg;
+    const fg = !focus ? [] : (phase === 'lunge' || phase === 'eat') ? [tg] : mon.group.filter((s) => s.alive);
+    const actors = alive().filter((s) => !fg.includes(s));
+    if (!focus) actors.push({ isMon: true, y: mon.y });
+    actors.sort((a, b) => a.y - b.y);
+    for (const a of actors) { if (a.isMon) drawMon(T); else drawStudent(ctx, a, T); }
+
+    // spotlight: dim everyone except the monster and the kids it is after
+    if (spot > 0.01) { ctx.fillStyle = `rgba(30,36,64,${0.5 * spot})`; ctx.fillRect(0, 0, W, H); }
+    if (focus) {
+      if (phase === 'eat') {
+        drawMon(T);
+        if (!tg.eaten) drawStudent(ctx, tg, T);
+      } else {
+        if (phase === 'lunge') drawTargetMarks(ctx, tg, T);
+        const list = fg.slice();
+        list.push({ isMon: true, y: mon.y });
+        list.sort((a, b) => a.y - b.y);
+        for (const a of list) { if (a.isMon) drawMon(T); else drawStudent(ctx, a, T); }
+      }
+      if (phase === 'chase' || phase === 'tease') {
+        for (const s of fg) drawTargetTag(ctx, s, T, false, phase === 'tease' && s === mon.feint);
+      } else if (!tg.eaten) drawTargetTag(ctx, tg, T, true, false);
+    }
+
+    if (phase === 'done') {
+      ctx.save(); ctx.fillStyle = INK; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      for (let i = 0; i < 3; i++) {
+        const k = (T * 0.45 + i / 3) % 1;
+        ctx.globalAlpha = Math.sin(k * Math.PI);
+        ctx.font = font(mon.R * 0.28 * (0.6 + k * 0.7));
+        ctx.fillText('Z', mon.x + mon.R * 0.75 + k * mon.R * 0.5, mon.y - mon.R * 0.9 - k * mon.R * 0.9);
+      }
+      ctx.restore();
+    }
+
+    for (const p of parts) {
+      ctx.globalAlpha = Math.max(0, p.life);
+      ctx.fillStyle = p.color;
+      if (p.star) { star(ctx, p.x, p.y, p.size * 1.6); ctx.fill(); }
+      else { ell(ctx, p.x, p.y, p.size, p.size); ctx.fill(); }
+    }
+    ctx.globalAlpha = 1;
+    for (const t of texts) {
+      const k = 1 - t.life;
+      const sc = k < 0.15 ? 0.5 + (k / 0.15) * 0.7 : 1.2 - Math.min(0.2, (k - 0.15));
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, t.life * 2);
+      ctx.translate(t.x, t.y); ctx.scale(sc, sc); ctx.rotate(-0.08);
+      ctx.font = font(t.size); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.lineWidth = t.size * 0.18; ctx.strokeStyle = '#fff'; ctx.lineJoin = 'round';
+      ctx.strokeText(t.text, 0, 0);
+      ctx.fillStyle = t.color || '#ff5d8f'; ctx.fillText(t.text, 0, 0);
+      ctx.restore();
+    }
+    ctx.restore();
+
+    if (mon.say) {
+      const toX = (x) => (x - cam.x) * cam.z + W / 2, toY = (y) => (y - cam.y) * cam.z + H / 2;
+      // keep the bubble off the kids in the spotlight: body, shirt number and tag above the head
+      const obstacles = fg.filter((s) => s.scale > 0.3).map((s) => {
+        const r = s.r * (s.big || 1) * cam.z;
+        const top = toY(s.y) - r * 1.35 - Math.max(18, s.r * 0.85) * cam.z * 1.45 - 22;
+        return { x: toX(s.x) - r * 1.1, y: top, w: r * 2.2, h: toY(s.y) + r * 1.1 - top };
+      });
+      drawBubble(ctx, mon.say.text, toX(mon.x), toY(mon.y), mon.R * cam.z, obstacles);
+    }
+  }
+
+  const pctx = $('#portrait').getContext('2d');
+  function drawPortrait(T) {
+    if (!revealKid) return;
+    pctx.setTransform(1, 0, 0, 1, 0, 0);
+    pctx.clearRect(0, 0, 240, 240);
+    drawStudent(pctx, { ...revealKid, x: 120, y: 138, vx: 0, vy: 0, r: 76, scale: 1, big: 1, panic: 0, lookX: 0, lookY: 0.3 }, T);
+  }
+
+  // ---------- loop & resize ----------
+  let last = performance.now(), T = 0;
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now; T += dt;
+    if (W > 0 && H > 0) { update(dt, T); draw(T); }
+    if (!$('#setup').hidden) drawPreviews(T);
+    if (!$('#reveal').hidden) drawPortrait(T);
+    requestAnimationFrame(frame);
+  }
+
+  function resize() {
+    const rect = $('#fieldWrap').getBoundingClientRect();
+    if (rect.width < 10 || rect.height < 10) return; // hunt tab hidden
+    const ow = W, oh = H;
+    W = Math.max(1, rect.width); H = Math.max(1, rect.height);
+    DPR = Math.min(2, window.devicePixelRatio || 1);
+    cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+    if (ow > 0 && oh > 0) {
+      const kx = W / ow, ky = H / oh;
+      for (const s of students) { s.x *= kx; s.y *= ky; if (s.ex !== undefined) { s.ex *= kx; s.ey *= ky; } }
+      mon.x *= kx; mon.y *= ky;
+    }
+    sizeActors();
+    mon.x = clamp(mon.x, mon.R, Math.max(mon.R, W - mon.R));
+    mon.y = clamp(mon.y, mon.R * 1.3, Math.max(mon.R * 1.3, H - mon.R));
+    paintBackground();
+  }
+
+  // ---------- setup modal ----------
+  let draft = null;
+  function openSetup() {
+    draft = { count: settings.count, absent: settings.absent.slice(), monster: settings.monster, speed: settings.speed };
+    $('#resetWarn').hidden = order.length === 0;
+    $('#closeSetup').hidden = students.length === 0;
+    renderSetup();
+    $('#setup').hidden = false;
+    $('#startBtn').focus();
+  }
+  function closeSetup() { $('#setup').hidden = true; }
+  function renderSetup() {
+    $('#countRange').value = draft.count;
+    $('#countOut').textContent = `1~${draft.count}번`;
+    let chips = '';
+    for (let i = 1; i <= draft.count; i++) {
+      const out = draft.absent.includes(i);
+      chips += `<button type="button" class="chip" data-n="${i}" style="--c:${colorFor(i)}" aria-pressed="${out}" aria-label="${i}번 ${out ? '빠짐' : '참가'}">${i}</button>`;
+    }
+    $('#chips').innerHTML = chips;
+    document.querySelectorAll('.mon').forEach((b) => b.setAttribute('aria-pressed', b.dataset.m === draft.monster));
+    document.querySelectorAll('#speedSeg .btn').forEach((b) => b.setAttribute('aria-pressed', b.dataset.speed === draft.speed));
+    const n = draft.count - draft.absent.length;
+    $('#joinCount').innerHTML = `참가 <b>${n}</b>명`;
+    $('#startBtn').disabled = n < 1;
+  }
+  function setCount(v) {
+    draft.count = clamp(v, 1, 30);
+    draft.absent = draft.absent.filter((n) => n <= draft.count);
+    renderSetup();
+  }
+  $('#countRange').addEventListener('input', (e) => setCount(+e.target.value));
+  $('#minusBtn').addEventListener('click', () => setCount(draft.count - 1));
+  $('#plusBtn').addEventListener('click', () => setCount(draft.count + 1));
+  $('#chips').addEventListener('click', (e) => {
+    const b = e.target.closest('.chip'); if (!b) return;
+    const n = +b.dataset.n;
+    draft.absent = draft.absent.includes(n) ? draft.absent.filter((x) => x !== n) : [...draft.absent, n];
+    renderSetup();
+  });
+  $('#speedSeg').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-speed]'); if (!b) return;
+    draft.speed = b.dataset.speed; renderSetup();
+  });
+
+  const previews = [];
+  (function buildMonsterPicker() {
+    const box = $('#mons');
+    for (const key of Object.keys(MONSTERS)) {
+      const M = MONSTERS[key];
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'mon'; b.dataset.m = key;
+      const c = document.createElement('canvas');
+      c.width = 280; c.height = 220;
+      b.append(c);
+      b.insertAdjacentHTML('beforeend', `<b>${M.name}</b><small>${M.desc}</small>`);
+      b.addEventListener('click', () => { draft.monster = key; renderSetup(); SFX.pop(); });
+      box.append(b);
+      previews.push({ key, c });
+    }
+  })();
+  function drawPreviews(t) {
+    for (const p of previews) {
+      const c = p.c.getContext('2d');
+      c.setTransform(2, 0, 0, 2, 0, 0);
+      c.clearRect(0, 0, 140, 110);
+      c.translate(70, 64);
+      const sel = draft && draft.monster === p.key;
+      drawMonster(c, p.key, 30, t + p.key.length, { sleep: false, mouth: sel ? 0.5 + 0.3 * Math.sin(t * 6) : 0, lookX: Math.sin(t * 1.3) * 0.5, lookY: 0.3, bulge: 0 });
+    }
+  }
+
+  $('#startBtn').addEventListener('click', () => {
+    Object.assign(settings, draft);
+    saveSettings();
+    closeSetup();
+    newGame();
+    SFX.pop();
+  });
+  $('#closeSetup').addEventListener('click', closeSetup);
+
+  // ---------- controls ----------
+  function showTab(name) {
+    const hunt = name === 'hunt';
+    $('#fieldWrap').hidden = !hunt;
+    $('#orderView').hidden = hunt;
+    $('#tabHunt').setAttribute('aria-selected', String(hunt));
+    $('#tabOrder').setAttribute('aria-selected', String(!hunt));
+  }
+  $('#tabHunt').addEventListener('click', () => showTab('hunt'));
+  $('#tabOrder').addEventListener('click', () => showTab('order'));
+  $('#backBtn').addEventListener('click', () => showTab('hunt'));
+  $('#toOrderBtn').addEventListener('click', () => { $('#finale').hidden = true; showTab('order'); });
+
+  function primary() {
+    if (!$('#setup').hidden) return;
+    if ($('#fieldWrap').hidden) { showTab('hunt'); return; }
+    if (phase === 'idle') hunt();
+    else if (phase === 'reveal') nextRound();
+    else if (phase === 'done') newGame();
+  }
+  function updateAutoBtn() { $('#autoBtn').setAttribute('aria-pressed', String(auto)); }
+  function updateSoundBtn() {
+    $('#soundBtn').setAttribute('aria-pressed', String(settings.sound));
+    $('#soundBtn').textContent = settings.sound ? '소리 켜짐' : '소리 꺼짐';
+  }
+  const blurAfter = (fn) => (e) => { fn(e); e.currentTarget.blur(); };
+  $('#huntBtn').addEventListener('click', blurAfter(primary));
+  $('#autoBtn').addEventListener('click', blurAfter(() => {
+    auto = !auto; updateAutoBtn();
+    $('#hint').hidden = phase !== 'idle' || auto;
+    if (auto) showTab('hunt');
+    if (auto && phase === 'idle') hunt();
+    if (auto && phase === 'reveal') nextRound();
+  }));
+  $('#soundBtn').addEventListener('click', blurAfter(() => { settings.sound = !settings.sound; saveSettings(); updateSoundBtn(); SFX.pop(); }));
+  $('#setBtn').addEventListener('click', blurAfter(openSetup));
+  $('#nextBtn').addEventListener('click', nextRound);
+  $('#skipBtn').addEventListener('click', skipLast);
+  $('#againBtn').addEventListener('click', newGame);
+  $('#closeFinale').addEventListener('click', () => { $('#finale').hidden = true; });
+
+  const fsBtn = $('#fsBtn');
+  if (!document.fullscreenEnabled) fsBtn.hidden = true;
+  fsBtn.addEventListener('click', blurAfter(() => {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    else document.documentElement.requestFullscreen().catch(() => toast('이 화면에서는 전체화면을 쓸 수 없어요'));
+  }));
+  document.addEventListener('fullscreenchange', () => { fsBtn.textContent = document.fullscreenElement ? '전체화면 끄기' : '전체화면'; });
+
+  function orderText() {
+    return '발표 순서\n' + order.map((n, i) => `${i + 1}. ${n}번`).join('\n');
+  }
+  async function copyOrder() {
+    if (!order.length) { toast('아직 정해진 순서가 없어요'); return; }
+    const txt = orderText();
+    try {
+      await navigator.clipboard.writeText(txt);
+      toast('발표 순서를 복사했어요');
+    } catch (e) {
+      const ta = $('#copyFallback');
+      ta.value = txt;
+      if ($('#finale').hidden) { order.length && $('#finalList') && finaleView(); }
+      ta.hidden = false; ta.focus(); ta.select();
+      toast('자동 복사가 안 돼요. 선택된 글자를 Ctrl+C로 복사하세요');
+    }
+  }
+  function finaleView() {
+    $('#finalList').innerHTML = order.map((n, i) => `<li><span>${i + 1}</span><b>${n}번</b></li>`).join('');
+    $('#finale').hidden = false;
+  }
+  $('#copyBtn').addEventListener('click', copyOrder);
+  $('#copyBtn2').addEventListener('click', copyOrder);
+
+  let toastTimer = 0;
+  function toast(msg) {
+    const t = $('#toast');
+    t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.hidden = true; }, 2400);
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (!$('#setup').hidden && students.length) closeSetup();
+      return;
+    }
+    if (e.key !== ' ' && e.key !== 'Enter') return;
+    if (!$('#setup').hidden) return;
+    if (e.target.closest && e.target.closest('textarea, input')) return;
+    if (e.target.closest && e.target.closest('button') && e.key === 'Enter') return;
+    e.preventDefault();
+    primary();
+  });
+
+  // ---------- boot ----------
+  updateSoundBtn();
+  new ResizeObserver(() => resize()).observe($('#fieldWrap'));
+  resize();
+  newGame();
+  if (!saved) openSetup();
+  if (document.fonts && document.fonts.load) document.fonts.load('20px Jua').catch(() => {});
+  requestAnimationFrame(frame);
+})();
+</script>
+
+</body>
+</html>
